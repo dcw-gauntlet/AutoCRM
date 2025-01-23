@@ -35,6 +35,7 @@ export const TicketRow = ({ ticket, onSelect }: {
     const TypeIcon = getTypeIcon(ticket.type);
 
     const handleTagClick = (event: React.MouseEvent<HTMLElement>) => {
+        event.stopPropagation(); // Prevent row click when clicking tag button
         setAnchorEl(event.currentTarget);
     };
 
@@ -43,6 +44,7 @@ export const TicketRow = ({ ticket, onSelect }: {
     };
 
     const open = Boolean(anchorEl);
+    const tags = ticket.tags || [];  // Default to empty array if tags is undefined
 
     const cellStyles = {
         whiteSpace: 'normal',
@@ -125,7 +127,7 @@ export const TicketRow = ({ ticket, onSelect }: {
                         <LocalOffer fontSize="small" />
                     </IconButton>
                     <Typography variant="body2" color="text.secondary">
-                        {ticket.tags.length}
+                        {tags.length}
                     </Typography>
                 </Box>
                 <Popover
@@ -140,27 +142,34 @@ export const TicketRow = ({ ticket, onSelect }: {
                         vertical: 'top',
                         horizontal: 'left',
                     }}
+                    onClick={(e) => e.stopPropagation()} // Prevent row click when clicking popover
                 >
                     <Paper sx={{ p: 1.5, maxWidth: 300 }}>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                            {ticket.tags.map((tag) => (
-                                <Chip
-                                    key={tag.id}
-                                    label={tag.tag}
-                                    size="small"
-                                    sx={{ backgroundColor: 'rgba(0, 0, 0, 0.08)' }}
-                                />
-                            ))}
+                            {tags.length > 0 ? (
+                                tags.map((tag) => (
+                                    <Chip
+                                        key={tag.id}
+                                        label={tag.tag}
+                                        size="small"
+                                        sx={{ backgroundColor: 'rgba(0, 0, 0, 0.08)' }}
+                                    />
+                                ))
+                            ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                    No tags
+                                </Typography>
+                            )}
                         </Box>
                     </Paper>
                 </Popover>
             </TableCell>
             <TableCell sx={cellStyles}>
-                {ticket.created_at.toLocaleDateString()}
+                {new Date(ticket.created_at).toLocaleDateString()}
             </TableCell>
             <TableCell sx={cellStyles}>
-                {ticket.updated_at.toLocaleDateString()}
+                {new Date(ticket.updated_at).toLocaleDateString()}
             </TableCell>
         </TableRow>
-    )
-}
+    );
+};

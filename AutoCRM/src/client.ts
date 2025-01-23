@@ -1,17 +1,11 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Tag, Ticket, TicketPriority, TicketStatus, TicketType } from './types';
-
-interface UserProfile {
-    id: string;
-    email: string;
-    full_name?: string;
-}
+import { Tag, Ticket, TicketPriority, TicketStatus, TicketType, TicketMessage, UserProfile, UserType } from './types';
 
 export class AutoCRMClient {
     private client: SupabaseClient;
     private readonly BASE_TICKET_QUERY = `
         *,
-        assignee:user_profiles!tickets_assignee_fkey (
+        assignee:users!tickets_assignee_fkey (
             id,
             email,
             full_name
@@ -23,6 +17,15 @@ export class AutoCRMClient {
                 tag
             )
         )
+    `;
+
+    private readonly BASE_MESSAGE_QUERY = `
+        id,
+        created_at,
+        updated_at,
+        ticket_id,
+        text,
+        sender_id
     `;
 
     constructor(supabaseUrl: string, supabaseKey: string) {
@@ -38,6 +41,17 @@ export class AutoCRMClient {
                 .map((tt: any) => tt.tags)
                 .filter(Boolean)
                 .map((tag: any) => ({ id: tag.id, tag: tag.tag }))
+        };
+    }
+
+    private transformMessage(message: any): TicketMessage {
+        return {
+            id: message.id,
+            ticket_id: message.ticket_id,
+            text: message.text,
+            created_at: new Date(message.created_at),
+            updated_at: new Date(message.updated_at),
+            sender: message.sender
         };
     }
 
@@ -201,16 +215,131 @@ export class AutoCRMClient {
 
         return this.getTicketById(ticketId) as Promise<Ticket>;
     }
+
+    private transformUserProfile(profile: any): UserProfile {
+        return {
+            ...profile,
+            created_at: new Date(profile.created_at),
+            updated_at: new Date(profile.updated_at)
+        };
+    }
+
+    async createUserProfile(input: {
+        user_id: string;
+        email: string;
+        full_name?: string;
+        friendly_name?: string;
+        avatar?: string;
+        role?: UserType;
+    }): Promise<UserProfile> {
+        const { data, error } = await this.client
+            .from('users')
+            .insert([{
+                user_id: input.user_id,
+                email: input.email,
+                full_name: input.full_name || null,
+                friendly_name: input.friendly_name || null,
+                avatar: input.avatar || null,
+                role: input.role || 'agent'
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to create user profile: ${error.message}`);
+        }
+
+        return this.transformUserProfile(data);
+    }
+
+    async updateUserProfile(userId: string, updates: {
+        email?: string;
+        full_name?: string | null;
+        friendly_name?: string | null;
+        avatar?: string | null;
+        role?: UserType;
+    }): Promise<UserProfile> {
+        const { data, error } = await this.client
+            .from('users')
+            .update(updates)
+            .eq('user_id', userId)
+            .select()
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to update user profile: ${error.message}`);
+        }
+
+        return this.transformUserProfile(data);
+    }
+
+    async getUserProfile(userId: string): Promise<UserProfile | null> {
+        const { data, error } = await this.client
+            .from('users')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to fetch user profile: ${error.message}`);
+        }
+
+        return data ? this.transformUserProfile(data) : null;
+    }
+
     async getAllUsers(): Promise<UserProfile[]> {
         const { data, error } = await this.client
-            .from('user_profiles')
-            .select('id, email, full_name');
+            .from('users')
+            .select('*');
 
         if (error) {
             throw new Error(`Failed to fetch users: ${error.message}`);
         }
 
-        return data || [];
+        return (data || []).map(this.transformUserProfile);
+    }
+
+    async getTicketMessages(ticketId: number): Promise<TicketMessage[]> {
+        const { data, error } = await this.client
+            .from('messages')
+            .select(`
+                ${this.BASE_MESSAGE_QUERY},
+                sender:users!messages_sender_id_fkey (*)
+            `)
+            .eq('ticket_id', ticketId)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            throw new Error(`Failed to fetch ticket messages: ${error.message}`);
+        }
+
+        return (data || []).map(message => ({
+            ...this.transformMessage(message),
+            sender: this.transformUserProfile(message.sender)
+        }));
+    }
+
+    async createTicketMessage(ticketId: number, text: string): Promise<TicketMessage> {
+        const user = await this.client.auth.getUser();
+        if (!user.data.user) {
+            throw new Error('User must be authenticated to create messages');
+        }
+
+        const { data, error } = await this.client
+            .from('ticket_messages')
+            .insert([{
+                ticket_id: ticketId,
+                text: text,
+                sender_id: user.data.user.id
+            }])
+            .select(this.BASE_MESSAGE_QUERY)
+            .single();
+
+        if (error) {
+            throw new Error(`Failed to create message: ${error.message}`);
+        }
+
+        return this.transformMessage(data);
     }
 }
 

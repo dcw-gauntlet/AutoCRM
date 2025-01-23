@@ -46,6 +46,8 @@ type UserType = 'customer' | 'worker' | 'admin';
 
 interface User extends BaseEntity {
     type: UserType;
+    full_name: string;
+    email: string;
 }
 
 type PermissionType = 'add' | 'read' | 'edit';
@@ -59,6 +61,7 @@ interface QueuePermission extends BaseEntity {
 interface TicketMessage extends BaseEntity {
     ticket_id: string;
     text: string;
+    sender: UserProfile;
 }
 
 interface Following extends BaseEntity {
@@ -69,8 +72,14 @@ interface Following extends BaseEntity {
 
 export interface UserProfile {
     id: string;
+    created_at: Date;
+    updated_at: Date;
+    user_id: string;
     email: string;
-    full_name?: string | null;
+    full_name: string | null;
+    friendly_name: string | null;
+    avatar: string | null;
+    role: UserType;
 }
 
 // Export all types and interfaces

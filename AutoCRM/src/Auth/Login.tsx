@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { supabase } from '../supabaseClient';
 import { Check, Close } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -21,6 +22,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [resetPassword, setResetPassword] = useState(false);
+  const navigate = useNavigate();
 
   const passwordsMatch = password === confirmPassword && password !== '';
 
@@ -49,7 +51,8 @@ export default function Login() {
         });
         if (result.error) throw result.error;
         if (result.data?.user) {
-          setError('Please check your email to confirm your account');
+          // Don't show email confirmation message anymore since we'll handle the flow through BasicDetails
+          // The App component will show BasicDetails when needed
         }
       } else {
         const result = await supabase.auth.signInWithPassword({

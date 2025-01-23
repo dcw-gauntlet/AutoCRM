@@ -1,36 +1,28 @@
 import { Box } from '@mui/material';
 import { TicketQueue } from './TicketQueue';
-import { Ticket } from './types';
+import { AutoCRM } from './AutoCRM';
 import { useEffect, useState } from 'react';
-import { supabase } from './supabaseClient';
-import { AutoCRMClient } from './client';
-
-// Use the shared client instance
-const client = new AutoCRMClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    import.meta.env.VITE_SUPABASE_KEY
-);
 
 interface DashboardProps {
-    tickets: Ticket[];
+    autoCRM: AutoCRM;
     onTicketSelect: (ticketId: number) => void;
 }
 
-export const Dashboard = ({ onTicketSelect }: DashboardProps) => {
-    const [assignedTickets, setAssignedTickets] = useState<Ticket[]>([]);
-    const [createdTickets, setCreatedTickets] = useState<Ticket[]>([]);
+export function Dashboard({ autoCRM, onTicketSelect }: DashboardProps) {
+    const [assignedTickets, setAssignedTickets] = useState<any[]>([]);
+    const [createdTickets, setCreatedTickets] = useState<any[]>([]);
     
     useEffect(() => {
         const loadUserTickets = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            const currentUser = await autoCRM.getCurrentUser();
+            if (!currentUser) return;
 
-            console.log('Loading tickets for user:', user.id);
+            console.log('Loading tickets for user:', currentUser.id);
 
             try {
                 const [assigned, created] = await Promise.all([
-                    client.getTicketsByAssignee(user.id),
-                    client.getTicketsByCreator(user.id)
+                    autoCRM.getTicketsByAssignee(currentUser.id),
+                    autoCRM.getTicketsByCreator(currentUser.id)
                 ]);
 
                 console.log('Assigned tickets:', assigned);
@@ -44,7 +36,7 @@ export const Dashboard = ({ onTicketSelect }: DashboardProps) => {
         };
 
         loadUserTickets();
-    }, []);
+    }, [autoCRM]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -61,4 +53,4 @@ export const Dashboard = ({ onTicketSelect }: DashboardProps) => {
             />
         </Box>
     );
-};
+}
