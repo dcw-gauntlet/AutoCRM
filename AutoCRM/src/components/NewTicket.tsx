@@ -217,19 +217,65 @@ export function NewTicket({ autoCRM }: NewTicketProps) {
                 <Snackbar
                     open={showSuccess}
                     anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-                    sx={{ mt: 8 }}
+                    sx={{ 
+                        mt: 8,
+                        '@keyframes popIn': {
+                            '0%': {
+                                transform: 'scale(0.6)',
+                                opacity: 0
+                            },
+                            '50%': {
+                                transform: 'scale(1.2)',
+                            },
+                            '100%': {
+                                transform: 'scale(1)',
+                                opacity: 1
+                            }
+                        },
+                        '@keyframes pulse': {
+                            '0%': {
+                                transform: 'scale(1)',
+                            },
+                            '50%': {
+                                transform: 'scale(1.05)',
+                            },
+                            '100%': {
+                                transform: 'scale(1)',
+                            }
+                        }
+                    }}
                 >
                     <Alert 
-                        icon={<CheckCircle sx={{ color: green[500] }} />}
+                        icon={
+                            <CheckCircle 
+                                sx={{ 
+                                    color: green[500],
+                                    animation: 'pulse 1.5s infinite',
+                                    fontSize: 64
+                                }} 
+                            />
+                        }
                         severity="success"
                         sx={{ 
-                            alignItems: 'center',
+                            py: 4,
+                            px: 6,
+                            borderRadius: 3,
+                            animation: 'popIn 0.5s ease-out',
+                            backgroundColor: 'success.light',
+                            boxShadow: 8,
                             '& .MuiAlert-icon': {
-                                fontSize: 40
+                                mr: 3,
+                                fontSize: 64,
+                            },
+                            '& .MuiAlert-message': {
+                                fontSize: '2rem',
+                                fontWeight: 'bold',
+                                color: 'success.dark',
+                                textShadow: '0 1px 0 rgba(255,255,255,0.5)'
                             }
                         }}
                     >
-                        Ticket Created Successfully!
+                        Ticket Created Successfully! 🎉
                     </Alert>
                 </Snackbar>
             </Stack>

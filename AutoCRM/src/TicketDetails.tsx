@@ -34,7 +34,7 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
         status: TicketStatus.open,
         messages: [],
         tags: [],
-        assignee: null
+        assignee: undefined
     });
 
     useEffect(() => {

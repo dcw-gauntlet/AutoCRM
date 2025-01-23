@@ -16,7 +16,7 @@ import { UserDisplay } from './UserDisplay';
 interface TicketAssigneeProps {
     ticketId: number;
     autoCRM: AutoCRM;
-    currentAssignee: User | null;
+    currentAssignee: User | undefined | null;
     onAssigneeUpdate: (newAssignee: User) => void;
 }
 

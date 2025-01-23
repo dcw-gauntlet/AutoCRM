@@ -15,7 +15,11 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 
 // Create an AppContent component that uses hooks
-function AppContent({ autoCRM, currentUser }: { autoCRM: AutoCRM, currentUser: User | null }) {
+function AppContent({ autoCRM, currentUser, setCurrentUser }: { 
+    autoCRM: AutoCRM, 
+    currentUser: User | null,
+    setCurrentUser: (user: User | null) => void 
+}) {
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -29,7 +33,7 @@ function AppContent({ autoCRM, currentUser }: { autoCRM: AutoCRM, currentUser: U
             }
         };
         loadCurrentUser();
-    }, [autoCRM]);
+    }, [autoCRM, setCurrentUser]);
 
     const handleTicketSelect = (ticketId: number) => {
         navigate(`/ticket/${ticketId}`);
@@ -92,7 +96,11 @@ export default function App({ autoCRM }: { autoCRM: AutoCRM }) {
 
     return (
         <BrowserRouter>
-            <AppContent autoCRM={autoCRM} currentUser={currentUser} />
+            <AppContent 
+                autoCRM={autoCRM} 
+                currentUser={currentUser} 
+                setCurrentUser={setCurrentUser}
+            />
         </BrowserRouter>
     );
 }
