@@ -337,17 +337,20 @@ export function Welcome({ autoCRM, setCurrentUser }: WelcomeProps) {
             </Typography>
 
             {mode === 'choose' ? (
-                <Stack spacing={2} alignItems="center">
+                <Stack spacing={2} alignItems="center" sx={{ width: '100%', maxWidth: 300, mx: 'auto' }}>
                     <Button 
                         variant="contained" 
                         size="large"
                         onClick={() => setMode('signup')}
+                        fullWidth
                     >
                         Get Started
                     </Button>
                     <Button 
                         variant="outlined"
+                        size="large"
                         onClick={() => setMode('login')}
+                        fullWidth
                     >
                         I already have an account
                     </Button>

@@ -73,8 +73,22 @@ export type Ticket = {
     tags: Tag[];
     creator: User;
     assignee: User;
+    queue: Queue;
 };
 
+export interface Queue {
+    id: number;
+    created_at: string;
+    name: string;
+    description?: string;
+}
+
+export interface UserQueue {
+    id: number;
+    created_at: string;
+    user_id: string;
+    queue_id: number;
+}
 
 /**
  * # AutoCRM
@@ -96,63 +110,61 @@ export class AutoCRM {
     async getTicketsByAssignee(userId: string): Promise<any[]> {
         const { data, error } = await this.client
             .from('tickets')
-            .select('*')
+            .select(`
+                *,
+                queue:queues!queue_id(*),
+                tags:ticket_tags(
+                    id,
+                    tags(
+                        id,
+                        tag
+                    )
+                )
+            `)
             .eq('assignee', userId);
 
         if (error) throw error;
-        
-        // If we have tickets, fetch related data
-        if (data && data.length > 0) {
-            const ticketsWithDetails = await Promise.all(data.map(async (ticket) => {
-                const [creator, assignee, tags] = await Promise.all([
-                    this.getUser(ticket.creator),
-                    this.getUser(ticket.assignee),
-                    this.getTagsForTicket(ticket.id)
-                ]);
-                
-                return {
-                    ...ticket,
-                    creator,
-                    assignee,
-                    tags
-                };
-            }));
-            
-            return ticketsWithDetails;
-        }
-        
-        return [];
+
+        // Fetch user data for creator and assignee
+        const ticketsWithUsers = await Promise.all((data || []).map(async (ticket) => {
+            const [creator, assignee] = await Promise.all([
+                this.getUser(ticket.creator),
+                this.getUser(ticket.assignee)
+            ]);
+            return {
+                ...ticket,
+                creator,
+                assignee,
+                tags: ticket.tags?.map((tt: any) => tt.tags) || []
+            };
+        }));
+
+        return ticketsWithUsers;
     }
 
     async getTicketsByCreator(userId: string): Promise<any[]> {
         const { data, error } = await this.client
             .from('tickets')
-            .select('*')
+            .select(`
+                *,
+                queue:queues!queue_id(*),
+                tags:ticket_tags(
+                    id,
+                    tags(
+                        id,
+                        tag
+                    )
+                )
+            `)
             .eq('creator', userId);
 
         if (error) throw error;
-        
-        // If we have tickets, fetch related data
-        if (data && data.length > 0) {
-            const ticketsWithDetails = await Promise.all(data.map(async (ticket) => {
-                const [creator, assignee, tags] = await Promise.all([
-                    this.getUser(ticket.creator),
-                    this.getUser(ticket.assignee),
-                    this.getTagsForTicket(ticket.id)
-                ]);
-                
-                return {
-                    ...ticket,
-                    creator,
-                    assignee,
-                    tags
-                };
-            }));
-            
-            return ticketsWithDetails;
-        }
-        
-        return [];
+
+        // Transform the nested tags data structure
+        return (data || []).map(ticket => ({
+            ...ticket,
+            tags: ticket.tags?.map((tt: any) => tt.tags) || []
+        }));
     }
 
     async upsertTicket(ticket: Partial<Ticket>): Promise<Ticket> {
@@ -212,20 +224,12 @@ export class AutoCRM {
     }
 
     async getAllUsers(): Promise<User[]> {
-        try {
-            const { data, error } = await this.client
-                .from('users')
-                .select('*');
-
-            if (error) {
-                throw error;
-            }
-
-            return data as any;
-        } catch (error: any) {
-            console.error("Error in getAllUsers:", error);
-            throw new Error(`Failed to get all users: ${error.message}`);
-        }
+        const { data, error } = await this.client
+            .from('users')
+            .select('*');
+        
+        if (error) throw error;
+        return data || [];
     }
 
     async getMessagesOnTicket(ticket_id: number): Promise<Message[]> {
@@ -271,7 +275,10 @@ export class AutoCRM {
         try {
             const { data: ticketData, error: ticketError } = await this.client
                 .from('tickets')
-                .select('*')
+                .select(`
+                    *,
+                    queue:queues(*)
+                `)
                 .eq('id', ticket_id)
                 .single();
 
@@ -320,6 +327,7 @@ export class AutoCRM {
                 tags: tags,
                 creator: creator,
                 assignee: assignee,
+                queue: ticketData.queue as Queue
             };
 
             return ticket;
@@ -365,7 +373,7 @@ export class AutoCRM {
 
     async addTag(ticket_id: number, tag_id: number): Promise<void> {
         try {
-            const { data, error } = await this.client
+            const { error } = await this.client
                 .from('ticket_tags')
                 .insert([{ ticket_id, tag_id }]);
 
@@ -500,7 +508,7 @@ export class AutoCRM {
         const sanitizedFileName = `profile-${timestamp}.${fileExt}`;
         const filePath = `${userId}/${sanitizedFileName}`;
         
-        const { data, error } = await this.client.storage
+        const { error } = await this.client.storage
             .from('auto_crm_profile_pictures')
             .upload(filePath, file, {
                 upsert: true,
@@ -605,7 +613,7 @@ export class AutoCRM {
         const filePath = `ticket-${ticketId}/${sanitizedFileName}`;
         
         // Upload the file
-        const { data, error } = await this.client.storage
+        const { error } = await this.client.storage
             .from('ticket_files')
             .upload(filePath, file, {
                 upsert: true,
@@ -678,5 +686,225 @@ export class AutoCRM {
             .eq('id', fileId);
 
         if (dbError) throw dbError;
+    }
+
+    async assignUserToQueue(userId: string, queueId: number): Promise<void> {
+        try {
+            const { error } = await this.client
+                .from('user_queues')
+                .upsert({ 
+                    user_id: userId, 
+                    queue_id: queueId 
+                }, {
+                    onConflict: 'user_id,queue_id'  // This tells Supabase to handle duplicates
+                });
+
+            if (error) throw error;
+        } catch (error: any) {
+            console.error("Error assigning user to queue:", error);
+            throw new Error(`Failed to assign user to queue: ${error.message}`);
+        }
+    }
+
+    async unassignUserFromQueue(userId: string, queueId: number): Promise<void> {
+        try {
+            const { error } = await this.client
+                .from('user_queues')
+                .delete()
+                .match({ user_id: userId, queue_id: queueId });
+
+            if (error) throw error;
+        } catch (error: any) {
+            console.error("Error unassigning user from queue:", error);
+            throw new Error(`Failed to unassign user from queue: ${error.message}`);
+        }
+    }
+
+    async getTicketsByQueue(queueId: number): Promise<any[]> {
+        const { data, error } = await this.client
+            .from('tickets')
+            .select(`
+                *,
+                queue_id,
+                queue:queues!queue_id(*)
+            `)
+            .eq('queue_id', queueId);
+
+        if (error) throw error;
+
+        // Fetch user data for creator and assignee
+        const ticketsWithUsers = await Promise.all((data || []).map(async (ticket) => {
+            const [creator, assignee] = await Promise.all([
+                this.getUser(ticket.creator),
+                this.getUser(ticket.assignee)
+            ]);
+            return {
+                ...ticket,
+                creator,
+                assignee
+            };
+        }));
+
+        return ticketsWithUsers;
+    }
+
+    async upsertQueue(queue: Partial<Queue>): Promise<Queue> {
+        try {
+            const { data, error } = await this.client
+                .from('queues')
+                .upsert({
+                    id: queue.id,
+                    name: queue.name,
+                    description: queue.description
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            if (!data) throw new Error('No data returned from upsert');
+            
+            return data;
+        } catch (error: any) {
+            console.error("Error upserting queue:", error);
+            throw new Error(`Failed to upsert queue: ${error.message}`);
+        }
+    }
+
+    async getAllQueues(): Promise<Queue[]> {
+        const { data, error } = await this.client
+            .from('queues')
+            .select('*');
+        
+        if (error) throw error;
+        return data || [];
+    }
+
+    async getUserQueues(userId: string): Promise<Queue[]> {
+        try {
+            const { data, error } = await this.client
+                .from('user_queues')
+                .select(`
+                    queue:queues(*)
+                `)
+                .eq('user_id', userId);
+
+            if (error) throw error;
+            
+            return (data || []).map(item => item.queue as unknown as Queue);
+        } catch (error: any) {
+            console.error("Error getting user queues:", error);
+            throw new Error(`Failed to get user queues: ${error.message}`);
+        }
+    }
+
+    async getQueueUsers(queueId: number): Promise<User[]> {
+        try {
+            const { data, error } = await this.client
+                .from('user_queues')
+                .select(`
+                    user_id,
+                    user:users(*)
+                `)
+                .eq('queue_id', queueId);
+
+            if (error) throw error;
+            
+            // Extract the user data from the nested structure
+            return (data || []).map(item => item.user as unknown as User);
+        } catch (error: any) {
+            console.error("Error getting queue users:", error);
+            throw new Error(`Failed to get queue users: ${error.message}`);
+        }
+    }
+
+    async assignTicketToQueue(ticketId: number, queueId: number): Promise<void> {
+        try {
+            const { error } = await this.client
+                .from('tickets')
+                .update({ queue_id: queueId })
+                .eq('id', ticketId);
+
+            if (error) throw error;
+        } catch (error: any) {
+            console.error("Error assigning ticket to queue:", error);
+            throw new Error(`Failed to assign ticket to queue: ${error.message}`);
+        }
+    }
+
+    async removeTicketFromQueue(ticketId: number): Promise<void> {
+        try {
+            const { error } = await this.client
+                .from('tickets')
+                .update({ queue_id: null })
+                .eq('id', ticketId);
+
+            if (error) throw error;
+        } catch (error: any) {
+            console.error("Error removing ticket from queue:", error);
+            throw new Error(`Failed to remove ticket from queue: ${error.message}`);
+        }
+    }
+
+    async isUserInQueue(userId: string, queueId: number): Promise<boolean> {
+        try {
+            const { data, error } = await this.client
+                .from('user_queues')
+                .select('id')
+                .match({ user_id: userId, queue_id: queueId })
+                .single();
+
+            if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "not found"
+            return !!data;
+        } catch (error: any) {
+            console.error("Error checking if user is in queue:", error);
+            throw new Error(`Failed to check if user is in queue: ${error.message}`);
+        }
+    }
+
+    async createQueue(queue: { name: string; description?: string }): Promise<Queue> {
+        const { data, error } = await this.client
+            .from('queues')
+            .insert([queue])
+            .select()
+            .single();
+        
+        if (error) throw error;
+        return data;
+    }
+
+    async getTickets(): Promise<Ticket[]> {
+        const { data, error } = await this.client
+            .from('tickets')
+            .select(`
+                *,
+                tags:ticket_tags(
+                    id,
+                    tags(
+                        id,
+                        tag
+                    )
+                ),
+                queue:queues(*)
+            `)
+            .order('updated_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Transform the nested tags data structure
+        return (data || []).map(ticket => ({
+            ...ticket,
+            tags: ticket.tags?.map((tt: any) => tt.tags) || []
+        }));
+    }
+
+    async getQueue(queueId: number): Promise<Queue> {
+        const { data, error } = await this.client
+            .from('queues')
+            .select('*')
+            .eq('id', queueId)
+            .single();
+        
+        if (error) throw error;
+        return data;
     }
 }

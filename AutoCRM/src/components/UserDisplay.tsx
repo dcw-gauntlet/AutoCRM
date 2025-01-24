@@ -45,6 +45,9 @@ export function UserDisplay({ user, size = 'medium', showTooltip = true }: UserD
         xlarge: '1.5rem'
     };
 
+    const displayName = user.friendly_name || `${user.first_name} ${user.last_name}`;
+    const tooltipName = user.friendly_name ? `${user.first_name} ${user.last_name}` : undefined;
+
     const AvatarComponent = (
         <Avatar 
             src={user.profile_picture_url}
@@ -72,6 +75,7 @@ export function UserDisplay({ user, size = 'medium', showTooltip = true }: UserD
                 <Tooltip
                     title={
                         <Paper sx={{ p: 1 }}>
+                            {tooltipName && <Typography variant="body2"><strong>Name:</strong> {tooltipName}</Typography>}
                             <Typography variant="body2"><strong>Email:</strong> {user.email}</Typography>
                             <Typography variant="body2"><strong>Role:</strong> {user.role}</Typography>
                         </Paper>
@@ -81,7 +85,7 @@ export function UserDisplay({ user, size = 'medium', showTooltip = true }: UserD
                 </Tooltip>
             ) : AvatarComponent}
             <Typography sx={{ fontSize: fontSizes[size] }}>
-                {user.first_name} {user.last_name}
+                {displayName}
             </Typography>
         </Stack>
     );

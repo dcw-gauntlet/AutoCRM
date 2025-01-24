@@ -1,4 +1,4 @@
-import { Ticket, TicketStatus, TicketPriority, TicketType } from '../types';
+import { Ticket, TicketStatus, TicketPriority, TicketType } from '../AutoCRM';
 
 export type SortField = keyof Ticket;
 export type SortDirection = 'asc' | 'desc';
@@ -10,12 +10,12 @@ export interface FilterState {
     search: string;
 }
 
-export const filterTickets = (
-    tickets: Ticket[],
+export function filterTickets(
+    tickets: Ticket[], 
     filters: FilterState,
-    sortField: SortField,
-    sortDirection: SortDirection
-): Ticket[] => {
+    sortField: SortField = 'updated_at',
+    sortDirection: SortDirection = 'desc'
+): Ticket[] {
     let filteredTickets = [...tickets];
 
     // Apply filters
@@ -30,32 +30,21 @@ export const filterTickets = (
     }
     if (filters.search) {
         const searchLower = filters.search.toLowerCase();
-        filteredTickets = filteredTickets.filter(ticket =>
+        filteredTickets = filteredTickets.filter(ticket => 
             ticket.title.toLowerCase().includes(searchLower) ||
-            ticket.description.toLowerCase().includes(searchLower) ||
-            ticket.tags.some(tag => tag.tag.toLowerCase().includes(searchLower))
+            ticket.description.toLowerCase().includes(searchLower)
         );
     }
 
-    // Apply sorting
+    // Sort tickets
     filteredTickets.sort((a, b) => {
-        let aValue = a[sortField];
-        let bValue = b[sortField];
+        const aValue = a[sortField];
+        const bValue = b[sortField];
 
-        if (aValue instanceof Date && bValue instanceof Date) {
-            return sortDirection === 'asc'
-                ? aValue.getTime() - bValue.getTime()
-                : bValue.getTime() - aValue.getTime();
-        }
-
-        if (typeof aValue === 'string') {
-            return sortDirection === 'asc'
-                ? aValue.localeCompare(bValue as string)
-                : (bValue as string).localeCompare(aValue);
-        }
-
+        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
         return 0;
     });
 
     return filteredTickets;
-}; 
+} 

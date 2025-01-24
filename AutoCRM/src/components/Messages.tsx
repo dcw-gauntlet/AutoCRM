@@ -11,7 +11,7 @@ import {
 import { Send as SendIcon } from '@mui/icons-material';
 import { AutoCRM, Message, User } from '../AutoCRM';
 import { UserDisplay } from './UserDisplay';
-
+import { MessageType } from '../AutoCRM';
 interface MessagesProps {
     ticketId: number;
     autoCRM: AutoCRM;

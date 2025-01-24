@@ -7,7 +7,7 @@ interface UserProps {
 }
 
 export const User: React.FC<UserProps> = ({ user }) => {
-  const displayName = user.full_name || user.email || 'Unknown User';
+  const displayName = user.friendly_name || `${user.first_name} ${user.last_name}` || user.email || 'Unknown User';
   
   return (
     <Box

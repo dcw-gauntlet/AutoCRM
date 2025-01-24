@@ -2,54 +2,50 @@ import {
     CheckCircle, 
     Error, 
     Warning, 
-    Info, 
-    PriorityHigh,
+    Info,
     BugReport,
-    Help,
-    Build,
-    SvgIconComponent
+    LiveHelp,
+    Construction,
+    Help
 } from '@mui/icons-material';
-import { TicketStatus, TicketPriority, TicketType } from '../types';
+import { TicketStatus, TicketPriority, TicketType } from '../AutoCRM';
 
-export const statusConfig: Record<TicketStatus, { icon: SvgIconComponent; label: string }> = {
-    open: { icon: Info, label: 'Open' },
-    in_progress: { icon: Build, label: 'In Progress' },
-    closed: { icon: CheckCircle, label: 'Closed' },
-    on_hold: { icon: Warning, label: 'On Hold' }
+export const statusConfig = {
+    [TicketStatus.open]: { icon: Info },
+    [TicketStatus.in_progress]: { icon: Construction },
+    [TicketStatus.closed]: { icon: CheckCircle },
+    [TicketStatus.on_hold]: { icon: Warning }
 };
 
-export const priorityConfig: Record<TicketPriority, { icon: SvgIconComponent; label: string }> = {
-    low: { icon: Info, label: 'Low Priority' },
-    medium: { icon: Warning, label: 'Medium Priority' },
-    high: { icon: Error, label: 'High Priority' },
-    urgent: { icon: PriorityHigh, label: 'Urgent' }
-};
-
-const typeIcons: Record<TicketType, SvgIconComponent> = {
-    bug: BugReport,
-    feature: Build,
-    support: Help,
-    inquiry: Info
-};
-
-export const getTypeIcon = (type: TicketType): SvgIconComponent => {
-    return typeIcons[type];
+export const priorityConfig = {
+    [TicketPriority.low]: { icon: Info },
+    [TicketPriority.medium]: { icon: Warning },
+    [TicketPriority.high]: { icon: Error },
+    [TicketPriority.urgent]: { icon: Error }
 };
 
 export const getStatusStyles = (status: TicketStatus) => ({
-    display: 'flex',
-    alignItems: 'center',
-    color: status === 'closed' ? 'success.main' :
-           status === 'in_progress' ? 'info.main' :
-           status === 'on_hold' ? 'warning.main' :
-           'text.secondary'
+    color: status === TicketStatus.closed ? 'success.main' :
+           status === TicketStatus.in_progress ? 'primary.main' :
+           status === TicketStatus.on_hold ? 'warning.main' : 
+           'info.main'
 });
 
 export const getPriorityStyles = (priority: TicketPriority) => ({
-    display: 'flex',
-    alignItems: 'center',
-    color: priority === 'urgent' ? 'error.main' :
-           priority === 'high' ? 'warning.main' :
-           priority === 'medium' ? 'info.main' :
-           'text.secondary'
-}); 
+    color: priority === TicketPriority.high ? 'error.main' :
+           priority === TicketPriority.medium ? 'warning.main' :
+           'info.main'
+});
+
+export const getTypeIcon = (type: TicketType) => {
+    switch (type) {
+        case TicketType.bug:
+            return BugReport;
+        case TicketType.feature:
+            return Construction;
+        case TicketType.support:
+            return LiveHelp;
+        default:
+            return Help;
+    }
+}; 

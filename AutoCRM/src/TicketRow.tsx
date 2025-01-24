@@ -14,162 +14,214 @@ import {
     TableRow, 
     TableCell, 
     Chip, 
-    Box, 
     Typography, 
-    Popover,
-    Paper,
-    IconButton
+    Stack
 } from '@mui/material';
-import { useState } from 'react';
-import { LocalOffer } from '@mui/icons-material';
-import { Ticket } from './types';
-import { statusConfig, priorityConfig, getStatusStyles, getPriorityStyles, getTypeIcon } from './utils/ticketStyles';
+import { Ticket } from './AutoCRM';
 
-export const TicketRow = ({ ticket, onSelect }: { 
+interface TicketRowProps {
     ticket: Ticket;
-    onSelect: (ticketId: number) => void;
-}) => {
-    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-    const StatusIcon = statusConfig[ticket.status].icon;
-    const PriorityIcon = priorityConfig[ticket.priority].icon;
-    const TypeIcon = getTypeIcon(ticket.type);
+    onClick: () => void;
+}
 
-    const handleTagClick = (event: React.MouseEvent<HTMLElement>) => {
-        event.stopPropagation(); // Prevent row click when clicking tag button
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleTagClose = () => {
-        setAnchorEl(null);
-    };
-
-    const open = Boolean(anchorEl);
-    const tags = ticket.tags || [];  // Default to empty array if tags is undefined
+export function TicketRow({ ticket, onClick }: TicketRowProps) {
+    const tags = ticket.tags || [];
 
     const cellStyles = {
         whiteSpace: 'normal',
         overflow: 'hidden',
-        padding: '16px'
+        padding: '8px 16px',
+        height: '72px',
+        bgcolor: '#f5f5f5'  // Light gray background for all cells
     };
 
-    const iconCellStyles = {
-        whiteSpace: 'nowrap',
-        padding: '16px'
+    const chipBaseStyles = {
+        width: '100%',
+        height: '28px',  // Slightly taller
+        borderRadius: '4px',
+        '& .MuiChip-label': {
+            fontSize: '0.875rem',  // Bigger text
+            fontWeight: 600,       // Bolder text
+            px: 1,
+            width: '100%',
+            textAlign: 'center'
+        }
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'open': return { 
+                bgcolor: '#ff4444',
+                color: '#fff'
+            };
+            case 'in_progress': return { 
+                bgcolor: '#00C851',
+                color: '#fff'
+            };
+            case 'on_hold': return { 
+                bgcolor: '#ffbb33',
+                color: '#000'
+            };
+            case 'closed': return { 
+                bgcolor: '#2196f3',
+                color: '#fff'
+            };
+            default: return { 
+                bgcolor: '#e0e0e0',
+                color: '#000'
+            };
+        }
+    };
+
+    const getPriorityColor = (priority: string) => {
+        switch (priority) {
+            case 'urgent': return { 
+                bgcolor: '#ff4444',
+                color: '#fff'
+            };
+            case 'high': return { 
+                bgcolor: '#ffbb33',
+                color: '#000'
+            };
+            case 'medium': return { 
+                bgcolor: '#00C851',
+                color: '#fff'
+            };
+            case 'low': return { 
+                bgcolor: '#e0e0e0',
+                color: '#000'
+            };
+            default: return { 
+                bgcolor: '#e0e0e0',
+                color: '#000'
+            };
+        }
+    };
+
+    const getTypeColor = (type: string) => {
+        switch (type) {
+            case 'bug': return { 
+                bgcolor: '#ff4444',
+                color: '#fff'
+            };
+            case 'feature': return { 
+                bgcolor: '#ff80ab',
+                color: '#000'
+            };
+            case 'support': return { 
+                bgcolor: '#ffbb33',
+                color: '#000'
+            };
+            case 'inquiry': return { 
+                bgcolor: '#2196f3',
+                color: '#fff'
+            };
+            default: return { 
+                bgcolor: '#e0e0e0',
+                color: '#000'
+            };
+        }
     };
 
     return (
-        <TableRow
-            sx={{
+        <TableRow 
+            hover 
+            onClick={onClick}
+            sx={{ 
+                cursor: 'pointer',
                 '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                },
-                cursor: 'pointer'
+                    bgcolor: '#eeeeee !important'  // Slightly darker on hover
+                }
             }}
-            onClick={() => onSelect(ticket.id)}
         >
-            <TableCell sx={iconCellStyles}>
-                <Box sx={getStatusStyles(ticket.status)} title={statusConfig[ticket.status].label}>
-                    <StatusIcon fontSize="small" />
-                </Box>
-            </TableCell>
-            <TableCell sx={iconCellStyles}>
-                <Box sx={getPriorityStyles(ticket.priority)} title={priorityConfig[ticket.priority].label}>
-                    <PriorityIcon fontSize="small" />
-                </Box>
-            </TableCell>
-            <TableCell sx={iconCellStyles}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }} title={ticket.type}>
-                    <TypeIcon fontSize="small" />
-                </Box>
-            </TableCell>
             <TableCell sx={cellStyles}>
-                <Typography 
-                    variant="body1" 
-                    fontWeight="medium"
-                    sx={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        lineHeight: 1.2
-                    }}
-                >
-                    {ticket.title}
-                </Typography>
-            </TableCell>
-            <TableCell sx={cellStyles}>
-                <Typography 
-                    variant="body2" 
-                    color="text.secondary"
-                    sx={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        lineHeight: 1.2
-                    }}
-                >
-                    {ticket.description}
-                </Typography>
-            </TableCell>
-            <TableCell sx={iconCellStyles}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <IconButton 
-                        size="small" 
-                        onClick={handleTagClick}
+                <Stack spacing={0.5}>
+                    <Typography 
+                        variant="body1" 
                         sx={{ 
-                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                            '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.08)'
-                            }
+                            fontWeight: 500,
+                            color: '#000'  // Darker text
                         }}
                     >
-                        <LocalOffer fontSize="small" />
-                    </IconButton>
-                    <Typography variant="body2" color="text.secondary">
-                        {tags.length}
+                        {ticket.title}
                     </Typography>
-                </Box>
-                <Popover
-                    open={open}
-                    anchorEl={anchorEl}
-                    onClose={handleTagClose}
-                    anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                    }}
-                    transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                    }}
-                    onClick={(e) => e.stopPropagation()} // Prevent row click when clicking popover
-                >
-                    <Paper sx={{ p: 1.5, maxWidth: 300 }}>
-                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                            {tags.length > 0 ? (
-                                tags.map((tag) => (
-                                    <Chip
-                                        key={tag.id}
-                                        label={tag.tag}
-                                        size="small"
-                                        sx={{ backgroundColor: 'rgba(0, 0, 0, 0.08)' }}
-                                    />
-                                ))
-                            ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                    No tags
-                                </Typography>
-                            )}
-                        </Box>
-                    </Paper>
-                </Popover>
+                    <Typography 
+                        variant="body2" 
+                        sx={{
+                            color: '#424242',  // Darker secondary text
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: 'vertical',
+                        }}
+                    >
+                        {ticket.description}
+                    </Typography>
+                </Stack>
             </TableCell>
+
             <TableCell sx={cellStyles}>
-                {new Date(ticket.created_at).toLocaleDateString()}
+                <Stack spacing={0.5}>
+                    {tags.map((tag) => (
+                        <Chip
+                            key={tag.id}
+                            label={tag.tag}
+                            size="small"
+                            sx={{
+                                ...chipBaseStyles,
+                                bgcolor: 'rgba(0, 0, 0, 0.08)',
+                                color: '#000'
+                            }}
+                        />
+                    ))}
+                    {tags.length === 0 && (
+                        <Typography 
+                            variant="body2" 
+                            color="text.secondary" 
+                            sx={{ 
+                                fontStyle: 'italic',
+                                color: '#616161'
+                            }}
+                        >
+                            No tags
+                        </Typography>
+                    )}
+                </Stack>
             </TableCell>
+
             <TableCell sx={cellStyles}>
-                {new Date(ticket.updated_at).toLocaleDateString()}
+                <Chip
+                    label={ticket.status.replace('_', ' ')}
+                    size="small"
+                    sx={{
+                        ...chipBaseStyles,
+                        ...getStatusColor(ticket.status)
+                    }}
+                />
+            </TableCell>
+
+            <TableCell sx={cellStyles}>
+                <Chip
+                    label={ticket.priority}
+                    size="small"
+                    sx={{
+                        ...chipBaseStyles,
+                        ...getPriorityColor(ticket.priority)
+                    }}
+                />
+            </TableCell>
+
+            <TableCell sx={cellStyles}>
+                <Chip
+                    label={ticket.type.replace('_', ' ')}
+                    size="small"
+                    sx={{
+                        ...chipBaseStyles,
+                        ...getTypeColor(ticket.type)
+                    }}
+                />
             </TableCell>
         </TableRow>
     );
-};
+}

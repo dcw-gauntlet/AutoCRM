@@ -13,7 +13,7 @@ import {
     Tabs,
     Tab
 } from '@mui/material';
-import { AutoCRM, Ticket, TicketPriority, TicketStatus, TicketType, User, MessageType, UserRole } from './AutoCRM';
+import { AutoCRM, Ticket, TicketPriority, TicketStatus, TicketType, User, MessageType, UserRole, Queue } from './AutoCRM';
 import { Messages } from './components/Messages';
 import { TicketTags } from './components/TicketTags';
 import { TicketAssignee } from './components/TicketAssignee';
@@ -23,6 +23,7 @@ import MessageIcon from '@mui/icons-material/Message';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh';
 import PersonIcon from '@mui/icons-material/Person';
+import QueueIcon from '@mui/icons-material/Queue';
 import { FileDisplay } from './components/FileDisplay';
 
 interface TicketDetailsProps {
@@ -37,9 +38,9 @@ interface TabPanelProps {
 
 function TabPanel({ children, value, index }: TabPanelProps) {
     return (
-        <Box hidden={value !== index} sx={{ pt: 2 }}>
+        <div role="tabpanel" hidden={value !== index}>
             {value === index && children}
-        </Box>
+        </div>
     );
 }
 
@@ -58,8 +59,10 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
         status: TicketStatus.open,
         messages: [],
         tags: [],
-        assignee: undefined
+        assignee: undefined,
+        queue_id: 1  // Just store the ID
     });
+    const [queues, setQueues] = useState<Queue[]>([]);
     const [activeTab, setActiveTab] = useState(0);
     const [files, setFiles] = useState<any[]>([]);
 
@@ -67,16 +70,22 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
         const loadData = async () => {
             try {
                 setLoading(true);
-                // Load current user
-                const user = await autoCRM.getCurrentUser();
+                const [user, allQueues, defaultQueue] = await Promise.all([
+                    autoCRM.getCurrentUser(),
+                    autoCRM.getAllQueues(),
+                    autoCRM.getQueue(1)  // Get default queue
+                ]);
                 setCurrentUser(user);
+                setQueues(allQueues);
 
-                // Load ticket if editing
+                // Load ticket if editing, otherwise set default queue
                 if (!isNewTicket && id) {
                     const ticketData = await autoCRM.getTicketDetails(parseInt(id));
                     if (ticketData) {
                         setTicket(ticketData);
                     }
+                } else {
+                    setTicket(prev => ({ ...prev, queue_id: defaultQueue.id }));
                 }
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -172,99 +181,92 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
             <Stack spacing={2} sx={{ height: '100%', overflow: 'hidden' }}>
                 {/* Title and Description section */}
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ flexShrink: 0 }}>
-                    <TextField
-                        label="Title"
-                        value={ticket.title}
-                        onChange={(e) => setTicket({ ...ticket, title: e.target.value })}
-                        required
-                        sx={{ flex: 2 }}
-                    />
-                    <TextField
-                        label="Description"
-                        value={ticket.description}
-                        onChange={(e) => setTicket({ ...ticket, description: e.target.value })}
-                        multiline
-                        rows={3}
-                        required
-                        sx={{ flex: 3 }}
-                    />
+                    {isStaff ? (
+                        <>
+                            <TextField
+                                label="Title"
+                                value={ticket.title}
+                                onChange={(e) => setTicket({ ...ticket, title: e.target.value })}
+                                required
+                                sx={{ flex: 2 }}
+                            />
+                            <TextField
+                                label="Description"
+                                value={ticket.description}
+                                onChange={(e) => setTicket({ ...ticket, description: e.target.value })}
+                                multiline
+                                rows={3}
+                                required
+                                sx={{ flex: 3 }}
+                            />
+                        </>
+                    ) : (
+                        <>
+                            <Paper variant="outlined" sx={{ p: 2, flex: 2 }}>
+                                <Typography variant="subtitle2" color="text.secondary">Title</Typography>
+                                <Typography>{ticket.title}</Typography>
+                            </Paper>
+                            <Paper variant="outlined" sx={{ p: 2, flex: 3 }}>
+                                <Typography variant="subtitle2" color="text.secondary">Description</Typography>
+                                <Typography>{ticket.description}</Typography>
+                            </Paper>
+                        </>
+                    )}
                 </Stack>
 
                 {/* Status fields section */}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ flexShrink: 0 }}>
                     {isStaff ? (
-                        <TextField
-                            select
-                            label="Priority"
-                            value={ticket.priority}
-                            onChange={(e) => setTicket({ ...ticket, priority: e.target.value as TicketPriority })}
-                            sx={{ flex: 1 }}
-                        >
-                            {Object.values(TicketPriority).map((priority) => (
-                                <MenuItem key={priority} value={priority}>
-                                    {priority}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        <>
+                            <TextField
+                                select
+                                label="Priority"
+                                value={ticket.priority}
+                                onChange={(e) => setTicket({ ...ticket, priority: e.target.value as TicketPriority })}
+                                sx={{ flex: 1 }}
+                            >
+                                {Object.values(TicketPriority).map((priority) => (
+                                    <MenuItem key={priority} value={priority}>{priority}</MenuItem>
+                                ))}
+                            </TextField>
+                            <TextField
+                                select
+                                label="Status"
+                                value={ticket.status}
+                                onChange={(e) => setTicket({ ...ticket, status: e.target.value as TicketStatus })}
+                                sx={{ flex: 1 }}
+                            >
+                                {Object.values(TicketStatus).map((status) => (
+                                    <MenuItem key={status} value={status}>{status}</MenuItem>
+                                ))}
+                            </TextField>
+                            <TextField
+                                select
+                                label="Type"
+                                value={ticket.type}
+                                onChange={(e) => setTicket({ ...ticket, type: e.target.value as TicketType })}
+                                sx={{ flex: 1 }}
+                            >
+                                {Object.values(TicketType).map((type) => (
+                                    <MenuItem key={type} value={type}>{type}</MenuItem>
+                                ))}
+                            </TextField>
+                        </>
                     ) : (
-                        <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <PriorityHighIcon color="action" />
-                                <Typography variant="body2" color="text.secondary">
-                                    Priority
-                                </Typography>
-                                <Chip 
-                                    label={ticket.priority} 
-                                    size="small"
-                                    color={ticket.priority === TicketPriority.high ? 'error' : 
-                                           ticket.priority === TicketPriority.medium ? 'warning' : 'default'}
-                                />
-                            </Stack>
-                        </Paper>
-                    )}
-
-                    <TextField
-                        select
-                        label="Type"
-                        value={ticket.type}
-                        onChange={(e) => setTicket({ ...ticket, type: e.target.value as TicketType })}
-                        sx={{ flex: 1 }}
-                    >
-                        {Object.values(TicketType).map((type) => (
-                            <MenuItem key={type} value={type}>
-                                {type}
-                            </MenuItem>
-                        ))}
-                    </TextField>
-
-                    {isStaff ? (
-                        <TextField
-                            select
-                            label="Status"
-                            value={ticket.status}
-                            onChange={(e) => setTicket({ ...ticket, status: e.target.value as TicketStatus })}
-                            sx={{ flex: 1 }}
-                        >
-                            {Object.values(TicketStatus).map((status) => (
-                                <MenuItem key={status} value={status}>
-                                    {status}
-                                </MenuItem>
-                            ))}
-                        </TextField>
-                    ) : (
-                        <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Typography variant="body2" color="text.secondary">
-                                    Status
-                                </Typography>
-                                <Chip 
-                                    label={ticket.status}
-                                    size="small"
-                                    color={ticket.status === TicketStatus.closed ? 'default' :
-                                           ticket.status === TicketStatus.in_progress ? 'primary' : 'warning'}
-                                />
-                            </Stack>
-                        </Paper>
+                        <>
+                            <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
+                                <Typography variant="subtitle2" color="text.secondary">Priority</Typography>
+                                <Chip label={ticket.priority} size="small" />
+                            </Paper>
+                            <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
+                                <Typography variant="subtitle2" color="text.secondary">Status</Typography>
+                                <Chip label={ticket.status} size="small" />
+                            </Paper>
+                            <Paper variant="outlined" sx={{ p: 2, flex: 1 }}>
+                                <Typography variant="subtitle2" color="text.secondary">Type</Typography>
+                                <Chip label={ticket.type} size="small" />
+                            </Paper>
+                        </>
                     )}
                 </Stack>
 

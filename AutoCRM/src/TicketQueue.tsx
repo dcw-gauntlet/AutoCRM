@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import { TicketRow } from './TicketRow';
-import { Ticket, TicketStatus, TicketPriority } from './AutoCRM';
+import { Ticket, TicketStatus, TicketPriority, TicketType } from './AutoCRM';
 import { FilterState, SortDirection, SortField, filterTickets } from './utils/ticketFilters';
 import { statusConfig, priorityConfig } from './utils/ticketStyles';
 
@@ -37,7 +37,7 @@ export function TicketQueue({ title, tickets, onTicketSelect }: TicketQueueProps
         search: ''
     });
 
-    const [sortField, setSortField] = useState<SortField>('created_at');
+    const [sortField, setSortField] = useState<SortField>('updated_at');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
     const handleSort = (field: SortField) => {
@@ -52,89 +52,96 @@ export function TicketQueue({ title, tickets, onTicketSelect }: TicketQueueProps
     const filteredTickets = filterTickets(tickets, filters, sortField, sortDirection);
 
     return (
-        <Stack spacing={2}>
+        <Stack spacing={2} sx={{ 
+            height: 'calc(100vh - 200px)', // Take up most of the available height
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            p: 2
+        }}>
             <Typography variant="h6">{title}</Typography>
-            <Box sx={{ 
-                maxHeight: '40vh',
-                overflowY: 'auto',
-                // Add subtle scrollbar styling
-                '&::-webkit-scrollbar': {
-                    width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                    background: '#f1f1f1',
-                    borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                    background: '#888',
-                    borderRadius: '4px',
-                    '&:hover': {
-                        background: '#555',
-                    },
-                },
-            }}>
-                <Stack spacing={2} sx={{ p: 1 }}>
-                    {filteredTickets.map(ticket => (
-                        <Paper 
-                            key={ticket.id} 
-                            sx={{ 
-                                p: 2, 
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    bgcolor: 'action.hover'
-                                }
-                            }}
-                            onClick={() => onTicketSelect(ticket.id)}
-                        >
-                            <Stack spacing={1}>
-                                <Typography variant="subtitle1">
-                                    {ticket.title}
-                                </Typography>
-                                <Typography 
-                                    variant="body2" 
-                                    color="text.secondary"
-                                    sx={{
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
-                                    }}
-                                >
-                                    {ticket.description}
-                                </Typography>
-                                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                                    <Chip 
-                                        label={ticket.status} 
-                                        size="small"
-                                        color={ticket.status === TicketStatus.closed ? 'default' :
-                                               ticket.status === TicketStatus.in_progress ? 'primary' : 'warning'}
-                                    />
-                                    <Chip 
-                                        label={ticket.priority}
-                                        size="small"
-                                        color={ticket.priority === TicketPriority.high ? 'error' : 
-                                               ticket.priority === TicketPriority.medium ? 'warning' : 'default'}
-                                    />
-                                    {ticket.tags && ticket.tags.map((tag: any) => (
-                                        <Chip
-                                            key={tag.id}
-                                            label={tag.tag}
-                                            size="small"
-                                            variant="outlined"
-                                        />
-                                    ))}
-                                </Stack>
-                            </Stack>
-                        </Paper>
-                    ))}
-                    {filteredTickets.length === 0 && (
-                        <Typography color="text.secondary" sx={{ p: 2 }}>
-                            No tickets found
-                        </Typography>
-                    )}
-                </Stack>
-            </Box>
+            
+            {/* Filter Controls */}
+            <Stack direction="row" spacing={2} sx={{ pb: 2, flexShrink: 0 }}>
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                        value={filters.status}
+                        label="Status"
+                        onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                    >
+                        <MenuItem value="all">All</MenuItem>
+                        {Object.values(TicketStatus).map(status => (
+                            <MenuItem key={status} value={status}>
+                                {status.replace('_', ' ')}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>Priority</InputLabel>
+                    <Select
+                        value={filters.priority}
+                        label="Priority"
+                        onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
+                    >
+                        <MenuItem value="all">All</MenuItem>
+                        {Object.values(TicketPriority).map(priority => (
+                            <MenuItem key={priority} value={priority}>
+                                {priority}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>Type</InputLabel>
+                    <Select
+                        value={filters.type}
+                        label="Type"
+                        onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                    >
+                        <MenuItem value="all">All</MenuItem>
+                        {Object.values(TicketType).map(type => (
+                            <MenuItem key={type} value={type}>
+                                {type.replace('_', ' ')}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+
+                <TextField
+                    size="small"
+                    label="Search"
+                    value={filters.search}
+                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    sx={{ minWidth: 200 }}
+                />
+            </Stack>
+
+            <TableContainer sx={{ flexGrow: 1 }}>
+                <Table stickyHeader>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Ticket</TableCell>
+                            <TableCell sx={{ padding: '16px' }}>Tags</TableCell>
+                            <TableCell sx={{ padding: '16px' }}>Status</TableCell>
+                            <TableCell sx={{ padding: '16px' }}>Priority</TableCell>
+                            <TableCell sx={{ padding: '16px' }}>Type</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {filteredTickets.map(ticket => (
+                            <TicketRow 
+                                key={ticket.id} 
+                                ticket={ticket}
+                                onClick={() => ticket.id && onTicketSelect(ticket.id)}
+                            />
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
         </Stack>
     );
 }

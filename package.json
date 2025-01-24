@@ -3,6 +3,7 @@
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.1",
+    "@mui/lab": "^6.0.0-beta.24",
     "@mui/material": "^6.4.0",
     "@supabase/supabase-js": "^2.48.0",
     "date-fns": "^4.1.0",
@@ -10,8 +11,11 @@
   },
   "devDependencies": {
     "@types/react-router-dom": "^5.3.3",
+    "@vitejs/plugin-react": "^4.3.4",
     "@vitest/ui": "^3.0.4",
     "dotenv": "^16.4.7",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11",
     "vitest": "^3.0.4"
   },
   "name": "autocrm",
@@ -19,7 +23,9 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest",
-    "test:e2e": "vitest src/tests/e2e.test.ts"
+    "test:e2e": "vitest src/tests/e2e.test.ts",
+    "build": "CI=false DISABLE_ESLINT_PLUGIN=true vite build",
+    "dist": "npm run build && cd dist && npm pack"
   },
   "repository": {
     "type": "git",
