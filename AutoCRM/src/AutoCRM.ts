@@ -93,42 +93,66 @@ export class AutoCRM {
         this.client = supabaseClient;
     }
 
-    async getTicketsByCreator(userId: string): Promise<Ticket[]> {
-        try {
-            const { data, error } = await this.client
-                .from('tickets')
-                .select('*')
-                .eq('creator', userId);
+    async getTicketsByAssignee(userId: string): Promise<any[]> {
+        const { data, error } = await this.client
+            .from('tickets')
+            .select('*')
+            .eq('assignee', userId);
 
-            if (error) {
-                throw error;
-            }
-
-            // console.log("data:", data);
-
-            return data as any;
-        } catch (error: any) {
-            console.error("Error in getTicketsByCreator:", error);
-            throw new Error(`Failed to get tickets by creator: ${error.message}`);
+        if (error) throw error;
+        
+        // If we have tickets, fetch related data
+        if (data && data.length > 0) {
+            const ticketsWithDetails = await Promise.all(data.map(async (ticket) => {
+                const [creator, assignee, tags] = await Promise.all([
+                    this.getUser(ticket.creator),
+                    this.getUser(ticket.assignee),
+                    this.getTagsForTicket(ticket.id)
+                ]);
+                
+                return {
+                    ...ticket,
+                    creator,
+                    assignee,
+                    tags
+                };
+            }));
+            
+            return ticketsWithDetails;
         }
+        
+        return [];
     }
 
-    async getTicketsByAssignee(userId: string): Promise<Ticket[]> {
-        try {
-            const { data, error } = await this.client
-                .from('tickets')
-                .select('*')
-                .eq('assignee', userId);
+    async getTicketsByCreator(userId: string): Promise<any[]> {
+        const { data, error } = await this.client
+            .from('tickets')
+            .select('*')
+            .eq('creator', userId);
 
-            if (error) {
-                throw error;
-            }
-
-            return data as any;
-        } catch (error: any) {
-            console.error("Error in getTicketsByAssignee:", error);
-            throw new Error(`Failed to get tickets by assignee: ${error.message}`);
+        if (error) throw error;
+        
+        // If we have tickets, fetch related data
+        if (data && data.length > 0) {
+            const ticketsWithDetails = await Promise.all(data.map(async (ticket) => {
+                const [creator, assignee, tags] = await Promise.all([
+                    this.getUser(ticket.creator),
+                    this.getUser(ticket.assignee),
+                    this.getTagsForTicket(ticket.id)
+                ]);
+                
+                return {
+                    ...ticket,
+                    creator,
+                    assignee,
+                    tags
+                };
+            }));
+            
+            return ticketsWithDetails;
         }
+        
+        return [];
     }
 
     async upsertTicket(ticket: Partial<Ticket>): Promise<Ticket> {
@@ -571,5 +595,88 @@ export class AutoCRM {
         } catch (error) {
             console.error("Error signing out:", error);
         }
+    }
+
+    async uploadTicketFile(ticketId: number, file: File): Promise<string> {
+        // Sanitize filename and create path
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileExt = file.name.split('.').pop()?.toLowerCase();
+        const sanitizedFileName = `ticket-${ticketId}-${timestamp}.${fileExt}`;
+        const filePath = `ticket-${ticketId}/${sanitizedFileName}`;
+        
+        // Upload the file
+        const { data, error } = await this.client.storage
+            .from('ticket_files')
+            .upload(filePath, file, {
+                upsert: true,
+                cacheControl: '3600'
+            });
+
+        if (error) {
+            console.error('Storage error:', error);
+            throw error;
+        }
+
+        // Get public URL
+        const { data: urlData } = this.client.storage
+            .from('ticket_files')
+            .getPublicUrl(filePath);
+
+        // Add entry to ticket_files table
+        const { error: dbError } = await this.client
+            .from('ticket_files')
+            .insert({
+                ticket_id: ticketId,
+                file_url: urlData.publicUrl,
+                file_name: file.name,
+                file_type: file.type
+            });
+
+        if (dbError) {
+            throw dbError;
+        }
+
+        return urlData.publicUrl;
+    }
+
+    async getTicketFiles(ticketId: number): Promise<any[]> {
+        const { data, error } = await this.client
+            .from('ticket_files')
+            .select('*')
+            .eq('ticket_id', ticketId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
+    }
+
+    async deleteTicketFile(fileId: number): Promise<void> {
+        const { data: fileData, error: fetchError } = await this.client
+            .from('ticket_files')
+            .select('file_url')
+            .eq('id', fileId)
+            .single();
+
+        if (fetchError) throw fetchError;
+
+        // Extract the path from the URL
+        const url = new URL(fileData.file_url);
+        const pathParts = url.pathname.split('/');
+        const filePath = pathParts.slice(pathParts.indexOf('ticket_files') + 1).join('/');
+
+        // Delete from storage
+        const { error: storageError } = await this.client.storage
+            .from('ticket_files')
+            .remove([filePath]);
+
+        if (storageError) throw storageError;
+
+        // Delete from database
+        const { error: dbError } = await this.client
+            .from('ticket_files')
+            .delete()
+            .eq('id', fileId);
+
+        if (dbError) throw dbError;
     }
 }
