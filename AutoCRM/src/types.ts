@@ -72,14 +72,13 @@ interface Following extends BaseEntity {
 
 export interface UserProfile {
     id: string;
-    created_at: Date;
-    updated_at: Date;
-    user_id: string;
+    created_at: string;
     email: string;
-    full_name: string | null;
-    friendly_name: string | null;
-    avatar: string | null;
+    first_name: string;
+    last_name: string;
     role: UserType;
+    profile_picture_url?: string;
+    friendly_name?: string;
 }
 
 // Export all types and interfaces

@@ -30,13 +30,16 @@ export enum UserRole {
 
 // Objects
 
-export type User = {
+export interface User {
     id: string;
+    created_at: string;
+    email: string;
     first_name: string;
     last_name: string;
-    email: string;
     role: UserRole;
-};
+    profile_picture_url?: string;
+    friendly_name?: string;
+}
 
 export type Message = {
     id: string;
@@ -77,12 +80,11 @@ export type Ticket = {
 
 
 export class AutoCRM {
-    public client: SupabaseClient;
+    private client;
     static readonly DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
 
-    constructor(client: SupabaseClient) {
-        
-        this.client = client;
+    constructor(supabaseClient: SupabaseClient) {
+        this.client = supabaseClient;
     }
 
     async getTicketsByCreator(userId: string): Promise<Ticket[]> {
@@ -132,8 +134,8 @@ export class AutoCRM {
                 priority: ticket.priority,
                 type: ticket.type,
                 status: ticket.status,
-                creator: ticket.creator?.id || this.DEFAULT_USER_ID,
-                assignee: ticket.assignee?.id || this.DEFAULT_USER_ID,
+                creator: ticket.creator?.id || AutoCRM.DEFAULT_USER_ID,
+                assignee: ticket.assignee?.id || AutoCRM.DEFAULT_USER_ID,
             };
 
             const { data, error } = await this.client
@@ -168,9 +170,12 @@ export class AutoCRM {
 
             return {
                 id: data.id,
+                created_at: data.created_at,
                 first_name: data.first_name,
                 last_name: data.last_name,
                 email: data.email,
+                friendly_name: data.friendly_name,
+                profile_picture_url: data.profile_picture_url,
                 role: data.role as UserRole
             };
         } catch (error: any) {
@@ -252,7 +257,7 @@ export class AutoCRM {
 
             // Fetch Creator
             const creatorId = ticketData.creator === null || ticketData.creator === undefined 
-                ? this.DEFAULT_USER_ID 
+                ? AutoCRM.DEFAULT_USER_ID 
                 : ticketData.creator;
             const creator = await this.getUser(creatorId);
             if (!creator) {
@@ -261,7 +266,7 @@ export class AutoCRM {
 
             // Fetch Assignee
             const assigneeId = ticketData.assignee === null || ticketData.assignee === undefined 
-                ? this.DEFAULT_USER_ID 
+                ? AutoCRM.DEFAULT_USER_ID 
                 : ticketData.assignee;
             const assignee = await this.getUser(assigneeId);
             if (!assignee) {
@@ -449,5 +454,41 @@ export class AutoCRM {
             console.error("Error in removeTag:", error);
             throw new Error(`Failed to remove tag: ${error.message}`);
         }
+    }
+
+    async uploadProfilePicture(userId: string, file: File): Promise<string> {
+        // Sanitize filename: remove spaces and special characters
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileExt = file.name.split('.').pop()?.toLowerCase();
+        const sanitizedFileName = `profile-${timestamp}.${fileExt}`;
+        const filePath = `${userId}/${sanitizedFileName}`;
+        
+        const { data, error } = await this.client.storage
+            .from('auto_crm_profile_pictures')
+            .upload(filePath, file, {
+                upsert: true,
+                cacheControl: '3600'
+            });
+
+        if (error) {
+            console.error('Storage error:', error);
+            throw error;
+        }
+
+        // Get public URL using the correct path
+        const { data: urlData } = this.client.storage
+            .from('auto_crm_profile_pictures')
+            .getPublicUrl(filePath);
+
+        // Log the URL for debugging
+        console.log('Generated public URL:', urlData.publicUrl);
+        
+        // Update user's profile_picture_url in the database
+        await this.upsertUser({
+            id: userId,
+            profile_picture_url: urlData.publicUrl
+        } as User);
+
+        return urlData.publicUrl;
     }
 }

@@ -9,6 +9,7 @@ import { TicketDetails } from './TicketDetails';
 import { NewTicket } from './components/NewTicket';
 import TestPage from './TestPage';
 import { UserDisplay } from './components/UserDisplay';
+import { Profile } from './components/Profile';
 
 // read keys from .env
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -47,16 +48,20 @@ function AppContent({ autoCRM, currentUser, setCurrentUser }: {
                         AutoCRM
                     </Typography>
                     <Stack direction="row" spacing={2} alignItems="center">
-                        <Button color="inherit" component={Link} to="/">
+                        <Button 
+                            color="inherit" 
+                            component={Link as any} 
+                            to="/"
+                        >
                             Dashboard
                         </Button>
-                        <Button color="inherit" component={Link} to="/new-ticket">
+                        <Button color="inherit" component={Link as any} to="/new-ticket">
                             New Ticket
                         </Button>
                         {currentUser ? (
                             <Button 
                                 color="inherit" 
-                                component={Link} 
+                                component={Link as any} 
                                 to="/profile"
                                 startIcon={
                                     <UserDisplay 
@@ -84,6 +89,15 @@ function AppContent({ autoCRM, currentUser, setCurrentUser }: {
                     <Route path="/new-ticket" element={<NewTicket autoCRM={autoCRM} />} />
                     <Route path="/ticket/:id" element={<TicketDetails autoCRM={autoCRM} />} />
                     <Route path="/test" element={<TestPage autoCRM={autoCRM} />} />
+                    <Route 
+                        path="/profile" 
+                        element={
+                            <Profile 
+                                autoCRM={autoCRM} 
+                                currentUser={currentUser} 
+                            />
+                        } 
+                    />
                 </Routes>
             </Container>
         </>
@@ -221,16 +235,16 @@ function TicketsPanel({ autoCRM, currentUser }: { autoCRM: AutoCRM, currentUser:
         }
 
         try {
-            const assignee = await autoCRM.getUser(ticketData.assignee);
-            if (!assignee) {
+            const assigneeUser = await autoCRM.getUser(ticketData.assignee);
+            if (!assigneeUser) {
                 alert('Invalid assignee ID');
                 return;
             }
 
             await autoCRM.upsertTicket({
                 ...ticketData,
-                creator: currentUser.id,
-                assignee: ticketData.assignee
+                creator: currentUser,
+                assignee: assigneeUser
             });
             alert('Ticket created successfully');
         } catch (error) {

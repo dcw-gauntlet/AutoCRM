@@ -26,35 +26,45 @@ export const getRoleColor = (role: UserRole) => {
 
 interface UserDisplayProps {
     user: User;
-    size?: 'small' | 'medium' | 'large';
+    size?: 'small' | 'medium' | 'large' | 'xlarge';
     showTooltip?: boolean;
 }
 
 export function UserDisplay({ user, size = 'medium', showTooltip = true }: UserDisplayProps) {
     const avatarSizes = {
-        small: 24,
-        medium: 32,
-        large: 40
+        small: 32,
+        medium: 48,
+        large: 64,
+        xlarge: 96
     };
 
     const fontSizes = {
-        small: '0.75rem',
-        medium: '0.875rem',
-        large: '1rem'
+        small: '0.875rem',
+        medium: '1rem',
+        large: '1.25rem',
+        xlarge: '1.5rem'
     };
 
     const AvatarComponent = (
         <Avatar 
+            src={user.profile_picture_url}
             sx={{ 
                 bgcolor: getRoleColor(user.role),
                 width: avatarSizes[size], 
                 height: avatarSizes[size],
-                fontSize: fontSizes[size]
+                border: `2px solid ${getRoleColor(user.role)}`,
+                '& img': {
+                    objectFit: 'cover',
+                    width: '100%',
+                    height: '100%'
+                }
             }}
         >
             {getInitials(user.first_name, user.last_name)}
         </Avatar>
     );
+
+    console.log('UserDisplay - profile picture URL:', user.profile_picture_url);
 
     return (
         <Stack direction="row" spacing={1} alignItems="center">

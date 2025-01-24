@@ -33,7 +33,7 @@ export function NewTicket({ autoCRM }: NewTicketProps) {
         type: TicketType.bug,
         status: TicketStatus.open,
         tags: [],
-        assignee: null
+        assignee: undefined
     });
 
     useEffect(() => {
@@ -54,7 +54,7 @@ export function NewTicket({ autoCRM }: NewTicketProps) {
     useEffect(() => {
         // Set default assignee to unassigned user
         const setDefaultAssignee = async () => {
-            const unassignedUser = await autoCRM.getUser(autoCRM.DEFAULT_USER_ID);
+            const unassignedUser = await autoCRM.getUser(AutoCRM.DEFAULT_USER_ID);
             if (unassignedUser) {
                 setTicket(prev => ({ ...prev, assignee: unassignedUser }));
             }
