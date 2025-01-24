@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 // Enums
 export enum TicketPriority {
@@ -28,6 +28,11 @@ export enum UserRole {
     admin = 'admin',
 }
 
+export enum MessageType {
+    public = 'public',
+    agent_only = 'agent_only',
+}
+
 // Objects
 
 export interface User {
@@ -47,6 +52,7 @@ export type Message = {
     created_at: Date;
     sender: User;
     ticket_id: number;
+    message_type: MessageType;
 };
 
 export type Tag = {
@@ -154,33 +160,30 @@ export class AutoCRM {
         }
     }
 
-    async getUser(userId: string): Promise<User | null> {
+    async getUser(id: string): Promise<User | null> {
         try {
             const { data, error } = await this.client
                 .from('users')
                 .select('*')
-                .eq('id', userId)
+                .eq('id', id)
                 .single();
 
             if (error) {
-                throw error;
+                // If it's a "no rows returned" error, silently return null
+                if (error.code === 'PGRST116') {
+                    return null;
+                }
+                // Only throw for unexpected errors
+                throw new Error(`Failed to get user: ${error.message}`);
             }
 
-            if (!data) return null;
-
-            return {
-                id: data.id,
-                created_at: data.created_at,
-                first_name: data.first_name,
-                last_name: data.last_name,
-                email: data.email,
-                friendly_name: data.friendly_name,
-                profile_picture_url: data.profile_picture_url,
-                role: data.role as UserRole
-            };
-        } catch (error: any) {
-            console.error("Error in getUser:", error);
-            throw new Error(`Failed to get user: ${error.message}`);
+            return data;
+        } catch (error) {
+            // Only rethrow unexpected errors
+            if (error instanceof Error && !error.message.includes('Failed to get user')) {
+                throw error;
+            }
+            return null;
         }
     }
 
@@ -203,7 +206,7 @@ export class AutoCRM {
 
     async getMessagesOnTicket(ticket_id: number): Promise<Message[]> {
         try {
-            // First get all messages for the ticket
+            // First get all messages for the ticket - remove the message_type filter
             const { data: messageData, error: messageError } = await this.client
                 .from('messages')
                 .select('*')
@@ -227,6 +230,7 @@ export class AutoCRM {
                         created_at: new Date(message.created_at),
                         sender: sender,
                         ticket_id: message.ticket_id,
+                        message_type: message.message_type
                     };
                 })
             );
@@ -303,10 +307,11 @@ export class AutoCRM {
     }
 
 
-    async addMessage({ ticket_id, text, sender_id }: { ticket_id: number, text: string, sender_id: string }) {
+    async addMessage({ ticket_id, text, sender_id, message_type = MessageType.public }: 
+        { ticket_id: number, text: string, sender_id: string, message_type?: MessageType }) {
         const { error } = await this.client
             .from('messages')
-            .insert([{ ticket_id, text, sender_id }]);
+            .insert([{ ticket_id, text, sender_id, message_type }]);
             
         if (error) {
             throw new Error(`Failed to add message: ${error.message}`);
@@ -375,10 +380,18 @@ export class AutoCRM {
     }
 
     async getCurrentUser(): Promise<User | null> {
-        const { data: { user } } = await this.client.auth.getUser();
-        if (!user) return null;
-        console.log("!!!!!!! user:", user);
-        return this.getUser(user.id);
+        try {
+            const { data: { user } } = await this.client.auth.getUser();
+            if (!user) return null;
+            
+            return await this.getUser(user.id);
+        } catch (error) {
+            // Only log actual errors, not expected conditions
+            if (!(error instanceof Error && error.message.includes('Failed to get user'))) {
+                console.error("Unexpected error getting current user:", error);
+            }
+            return null;
+        }
     }
 
     async login(email: string, password: string) {
@@ -490,5 +503,73 @@ export class AutoCRM {
         } as User);
 
         return urlData.publicUrl;
+    }
+
+    async signup(email: string, password: string): Promise<User> {
+        const { data, error } = await this.client.auth.signUp({
+            email,
+            password
+        });
+        
+        if (error) {
+            throw new Error(`Failed to sign up: ${error.message}`);
+        }
+        
+        if (!data.user) {
+            throw new Error('No user data returned from signup');
+        }
+
+        return {
+            id: data.user.id,
+            email: data.user.email!,
+            created_at: new Date().toISOString(),
+            first_name: '',
+            last_name: '',
+            role: UserRole.customer
+        };
+    }
+
+    async initiateSignup(email: string, password: string): Promise<{ user: any, session: any }> {
+        const { data, error } = await this.client.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: `${window.location.origin}/auth/verify-email`,
+            }
+        });
+        
+        if (error) {
+            throw error;
+        }
+        
+        if (!data.user) {
+            throw new Error('No user data returned from signup');
+        }
+
+        return data;
+    }
+
+    async checkEmailVerification(): Promise<boolean> {
+        const { data: { session } } = await this.client.auth.getSession();
+        return !!session?.user?.email_confirmed_at;
+    }
+
+    async resendVerificationEmail(email: string): Promise<void> {
+        const { error } = await this.client.auth.resend({
+            type: 'signup',
+            email: email
+        });
+        
+        if (error) {
+            throw error;
+        }
+    }
+
+    async signOut(): Promise<void> {
+        try {
+            await this.client.auth.signOut({ scope: 'global' });
+        } catch (error) {
+            console.error("Error signing out:", error);
+        }
     }
 }

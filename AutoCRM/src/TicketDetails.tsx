@@ -9,15 +9,35 @@ import {
     Button,
     Paper,
     Box,
-    Chip
+    Chip,
+    Tabs,
+    Tab
 } from '@mui/material';
-import { AutoCRM, Ticket, TicketPriority, TicketStatus, TicketType, User } from './AutoCRM';
+import { AutoCRM, Ticket, TicketPriority, TicketStatus, TicketType, User, MessageType } from './AutoCRM';
 import { Messages } from './components/Messages';
 import { TicketTags } from './components/TicketTags';
 import { TicketAssignee } from './components/TicketAssignee';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import TagIcon from '@mui/icons-material/Tag';
+import MessageIcon from '@mui/icons-material/Message';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 interface TicketDetailsProps {
     autoCRM: AutoCRM;
+}
+
+interface TabPanelProps {
+    children?: React.ReactNode;
+    value: number;
+    index: number;
+}
+
+function TabPanel({ children, value, index }: TabPanelProps) {
+    return (
+        <Box hidden={value !== index} sx={{ pt: 2 }}>
+            {value === index && children}
+        </Box>
+    );
 }
 
 export function TicketDetails({ autoCRM }: TicketDetailsProps) {
@@ -36,6 +56,7 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
         tags: [],
         assignee: undefined
     });
+    const [activeTab, setActiveTab] = useState(0);
 
     useEffect(() => {
         const loadTicket = async () => {
@@ -70,7 +91,7 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
         }
     };
 
-    const handleMessagesUpdate = async () => {
+    const handleMessagesUpdate = async (messageType: MessageType = MessageType.public) => {
         if (id) {
             const updatedTicket = await autoCRM.getTicketDetails(parseInt(id));
             if (updatedTicket) {
@@ -103,6 +124,10 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
             alert('Failed to update assignee');
         }
     };
+
+    console.log("All messages:", ticket.messages);
+    console.log("Agent messages:", ticket.messages?.filter(m => m.message_type === MessageType.agent_only));
+    console.log("Public messages:", ticket.messages?.filter(m => m.message_type === MessageType.public));
 
     if (loading) return <CircularProgress />;
 
@@ -179,19 +204,50 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
                         currentAssignee={ticket.assignee}
                         onAssigneeUpdate={handleAssigneeUpdate}
                     />
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                        <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+                            <Tab icon={<MessageIcon />} label="Messages" />
+                            <Tab icon={<AdminPanelSettingsIcon />} label="Internal Notes" />
+                            <Tab icon={<TagIcon />} label="Tags" />
+                            <Tab icon={<AttachFileIcon />} label="Files" />
+                        </Tabs>
+                    </Box>
+                </Stack>
+
+                <TabPanel value={activeTab} index={0}>
                     <Messages
                         ticketId={parseInt(id!)}
                         autoCRM={autoCRM}
-                        messages={ticket.messages || []}
-                        onMessagesUpdate={handleMessagesUpdate}
+                        messages={ticket.messages?.filter(m => m.message_type === MessageType.public) || []}
+                        onMessagesUpdate={() => handleMessagesUpdate(MessageType.public)}
+                        messageType={MessageType.public}
                     />
+                </TabPanel>
+
+                <TabPanel value={activeTab} index={1}>
+                    <Messages
+                        ticketId={parseInt(id!)}
+                        autoCRM={autoCRM}
+                        messages={ticket.messages?.filter(m => m.message_type === MessageType.agent_only) || []}
+                        onMessagesUpdate={() => handleMessagesUpdate(MessageType.agent_only)}
+                        messageType={MessageType.agent_only}
+                    />
+                </TabPanel>
+
+                <TabPanel value={activeTab} index={2}>
                     <TicketTags
                         ticketId={parseInt(id!)}
                         autoCRM={autoCRM}
                         currentTags={ticket.tags || []}
                         onTagsUpdate={handleTagsUpdate}
                     />
-                </Stack>
+                </TabPanel>
+
+                <TabPanel value={activeTab} index={3}>
+                    <Typography color="textSecondary">
+                        File attachments coming soon...
+                    </Typography>
+                </TabPanel>
 
                 <Stack direction="row" spacing={2} justifyContent="flex-end">
                     <Button onClick={() => navigate('/')}>

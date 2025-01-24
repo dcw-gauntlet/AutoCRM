@@ -17,9 +17,10 @@ interface MessagesProps {
     autoCRM: AutoCRM;
     messages: Message[];
     onMessagesUpdate: () => void;
+    messageType: MessageType;
 }
 
-export function Messages({ ticketId, autoCRM, messages, onMessagesUpdate }: MessagesProps) {
+export function Messages({ ticketId, autoCRM, messages, onMessagesUpdate, messageType }: MessagesProps) {
     const [newMessage, setNewMessage] = useState('');
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -36,22 +37,24 @@ export function Messages({ ticketId, autoCRM, messages, onMessagesUpdate }: Mess
     }, [messages]);
 
     const handleSendMessage = async () => {
-        if (!newMessage.trim() || !currentUser) return;
-
-        setSending(true);
+        if (!newMessage.trim()) return;
+        
         try {
+            const currentUser = await autoCRM.getCurrentUser();
+            if (!currentUser) throw new Error('No user logged in');
+            
             await autoCRM.addMessage({
                 ticket_id: ticketId,
                 text: newMessage,
-                sender_id: currentUser.id
+                sender_id: currentUser.id,
+                message_type: messageType
             });
+            
             setNewMessage('');
             onMessagesUpdate();
         } catch (error) {
             console.error('Error sending message:', error);
             alert('Failed to send message');
-        } finally {
-            setSending(false);
         }
     };
 
