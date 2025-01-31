@@ -137,6 +137,25 @@ export class AutoCRMClient {
 
         if (ticketError) throw new Error(`Failed to create ticket: ${ticketError.message}`);
 
+        // Enqueue message to ticket_creation queue
+        const { error: queueError } = await this.client
+            .from('ticket_creation')
+            .insert([{
+                ticket_id: ticketData.id,
+                ticket_data: {
+                    title: input.title,
+                    type: input.type,
+                    priority: input.priority
+                }
+            }]);
+
+        if (queueError) {
+            console.error('Failed to enqueue ticket creation message:', queueError);
+            // Note: Not throwing here to avoid failing the ticket creation
+        }
+
+        console.log('Ticket created and enqueued for processing:', ticketData);
+
         // Then create the tag associations if there are any tags
         if (ticketData && ticketData.tags?.length > 0) {
             // Get tag IDs for all the tags

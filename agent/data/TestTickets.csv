@@ -1,0 +1,36 @@
+Title,Description,Expected queue
+I've been stabbed,A madman stabbed me with a screwdriver. I'm really hurt!,Trauma
+Hit by bowling ball,I was bowling and my friend dropped a bowling ball on my foot. I think it's broken!,Trauma
+Car accident,I crashed my car and my head hit the steering wheel. I'm bleeding!,Trauma
+Fall from ladder,I fell off a ladder at work. My back and arm are in pain.,Trauma
+Electric shock injury,I touched a live wire and got shocked. My hand is burned and numb.,Trauma
+Severe abdominal pain,I have intense stomach pain that won't go away.,Gastroenterology
+Nausea and vomiting,I'm vomiting constantly. Can't keep anything down.,Gastroenterology
+Bloody stool,I noticed blood in my stool and it's freaking me out.,Gastroenterology
+Persistent diarrhea,I've had non-stop diarrhea for two days.,Gastroenterology
+Suspected ulcer,"Sharp stomach pains after meals, feels like an ulcer.",Gastroenterology
+Chest pain,I have crushing pain in my chest. It started an hour ago.,Cardiology
+Arrhythmia,"My heart is fluttering, feels very irregular.",Cardiology
+Shortness of breath & chest tightness,I'm short of breath and my chest is tight.,Cardiology
+Palpitations & dizziness,"My heart is racing, and I feel lightheaded.",Cardiology
+Elevated blood pressure & headache,"My BP is through the roof, head is throbbing.",Cardiology
+Suspected knee fracture,Twisted my knee — heard a pop. It's swollen and hurts to move.,Orthopedics
+Shoulder dislocation,My shoulder looks out of place after a fall.,Orthopedics
+Hip pain (elderly patient),"I fell at home, and now I can't put weight on my hip.",Orthopedics
+Wrist sprain,Tripped and fell on my hand. My wrist is swollen.,Orthopedics
+Chronic back pain flare-up,My back pain's worse than usual. I'm having trouble walking.,Orthopedics
+Asthma attack,"Wheezing, can't catch my breath. It's getting worse.",Respiratory
+COPD exacerbation,"I'm very short of breath, coughing more than usual.",Respiratory
+Possible pneumonia,I have a fever and bad cough with chest pains.,Respiratory
+Chronic cough,"I've been coughing for weeks, especially at night.",Respiratory
+Suspected pulmonary embolism,"Sudden chest pain, hard to breathe after a long trip.",Respiratory
+Laceration from glass,I cut my arm on broken glass. It's deep and bleeding a lot.,Trauma
+Concussion from slip & fall,"I hit my head on the floor, feeling dizzy and seeing stars.",Trauma
+Gunshot wound,"There's a bullet wound in my thigh, bleeding heavily.",Trauma
+"Bike accident, broken arm","Fell off my bike, my arm looks crooked and I can’t move it.",Trauma
+Dog bite on hand,"Got bitten by a dog, there’s a puncture wound.",Trauma
+Strange rash,I'm covered in a weird rash. No idea what's causing it.,Unknown
+General weakness,"I feel extremely weak for days, no clue why.",Unknown
+Unexplained fainting,"I randomly passed out, but feel okay now.",Unknown
+Mystery lumps,"Found lumps on my neck that don’t hurt, but they worry me.",Unknown
+Odd chest sensation,"Feels strange in my chest, not painful, just weird.",Unknown

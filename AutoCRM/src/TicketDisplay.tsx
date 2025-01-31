@@ -12,12 +12,12 @@ import {
   MenuItem,
   TextField,
 } from '@mui/material';
-import { MessageDisplay } from './MessageDisplay';
-import { Ticket, TicketMessage, UserProfile } from './types';
+import { Messages } from './components/Messages';
 import styled from 'styled-components';
 import { User } from './User';
+import { Ticket, User as UserProfile, Message as TicketMessage, Queue } from './AutoCRM';
 import AddIcon from '@mui/icons-material/Add';
-import { TicketStatus, TicketType } from './types';
+import { AutoCRM } from './AutoCRM';
 
 const ScrollableMessages = styled.div`
   max-height: 400px;
@@ -32,6 +32,8 @@ interface TicketDisplayProps {
   onSave?: (e: React.FormEvent) => void;
   onUpdate?: (updatedTicket: Partial<Ticket>) => void;
   availableUsers?: UserProfile[];
+  availableQueues?: Queue[];
+  autoCRM: AutoCRM;
 }
 
 export const TicketDisplay: React.FC<TicketDisplayProps> = ({
@@ -41,6 +43,8 @@ export const TicketDisplay: React.FC<TicketDisplayProps> = ({
   onSave,
   onUpdate,
   availableUsers,
+  availableQueues,
+  autoCRM,
 }) => {
   const [editedTicket, setEditedTicket] = React.useState<Partial<Ticket>>({
     title: ticket.title,
@@ -52,7 +56,11 @@ export const TicketDisplay: React.FC<TicketDisplayProps> = ({
   });
 
   const handleChange = (field: keyof Ticket, value: any) => {
-    setEditedTicket(prev => ({ ...prev, [field]: value }));
+    const updatedTicket = { ...editedTicket, [field]: value };
+    setEditedTicket(updatedTicket);
+    if (onUpdate) {
+        onUpdate(updatedTicket);
+    }
   };
 
   const isEditable = mode === 'edit';
@@ -72,12 +80,8 @@ export const TicketDisplay: React.FC<TicketDisplayProps> = ({
             {isEditable ? (
               <Select
                 fullWidth
-                value={editedTicket.assignee || ''}
-                onChange={(e) => handleChange('assignee', { id: e.target.value })}
-                renderValue={(value) => {
-                  const user = availableUsers?.find(u => u.id === value);
-                  return value && user ? <User user={user} /> : 'Unassigned';
-                }}
+                value={editedTicket.assignee?.id || ''}
+                onChange={(e) => handleChange('assignee', availableUsers?.find(u => u.id === e.target.value))}
               >
                 <MenuItem value="">Unassigned</MenuItem>
                 {availableUsers?.map((user) => (
@@ -88,11 +92,7 @@ export const TicketDisplay: React.FC<TicketDisplayProps> = ({
               </Select>
             ) : (
               <Typography>
-                {ticket.assignee ? (
-                  <User user={ticket.assignee as unknown as UserProfile} />
-                ) : (
-                  'Unassigned'
-                )}
+                {ticket.assignee ? <User user={ticket.assignee} /> : 'Unassigned'}
               </Typography>
             )}
           </Grid>
@@ -135,6 +135,32 @@ export const TicketDisplay: React.FC<TicketDisplayProps> = ({
             ) : (
               <Typography sx={{ textTransform: 'capitalize' }}>
                 {ticket.status.replace('_', ' ')}
+              </Typography>
+            )}
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <Typography variant="subtitle2" color="textSecondary">
+              Queue
+            </Typography>
+            {isEditable ? (
+              <Select
+                fullWidth
+                value={editedTicket.queue?.id || ''}
+                onChange={(e) => {
+                    const selectedQueue = availableQueues?.find(q => q.id === e.target.value);
+                    handleChange('queue', selectedQueue);
+                }}
+              >
+                <MenuItem value="">No Queue</MenuItem>
+                {availableQueues?.map((queue) => (
+                  <MenuItem key={queue.id} value={queue.id}>
+                    {queue.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            ) : (
+              <Typography>
+                {ticket.queue?.name || 'No Queue'}
               </Typography>
             )}
           </Grid>
@@ -207,9 +233,13 @@ export const TicketDisplay: React.FC<TicketDisplayProps> = ({
           Log
         </Typography>
         <ScrollableMessages>
-          {messages.map((message) => (
-            <MessageDisplay key={message.id} message={message} />
-          ))}
+          <Messages 
+            ticketId={ticket.id} 
+            messages={messages} 
+            autoCRM={autoCRM} 
+            onMessagesUpdate={() => {}} 
+            messageType={MessageType.public} 
+          />
         </ScrollableMessages>
       </Box>
 

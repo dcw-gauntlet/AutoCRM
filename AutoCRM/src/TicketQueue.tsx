@@ -31,9 +31,9 @@ interface TicketQueueProps {
 
 export function TicketQueue({ title, tickets, onTicketSelect }: TicketQueueProps) {
     const [filters, setFilters] = useState<FilterState>({
-        status: 'all',
-        priority: 'all',
-        type: 'all',
+        status: 'all' as const,
+        priority: 'all' as const,
+        type: 'all' as const,
         search: ''
     });
 
@@ -51,97 +51,232 @@ export function TicketQueue({ title, tickets, onTicketSelect }: TicketQueueProps
 
     const filteredTickets = filterTickets(tickets, filters, sortField, sortDirection);
 
+    const filterControlStyles = {
+        '& .MuiOutlinedInput-root': {
+            bgcolor: 'background.paper',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+                bgcolor: 'action.hover',
+                '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: 'primary.main',
+                }
+            }
+        },
+        '& .MuiInputLabel-root.Mui-focused': {
+            color: 'primary.main'
+        }
+    };
+
     return (
-        <Stack spacing={2} sx={{ 
-            height: 'calc(100vh - 200px)', // Take up most of the available height
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: 1,
-            p: 2
-        }}>
-            <Typography variant="h6">{title}</Typography>
-            
-            {/* Filter Controls */}
-            <Stack direction="row" spacing={2} sx={{ pb: 2, flexShrink: 0 }}>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel>Status</InputLabel>
-                    <Select
-                        value={filters.status}
-                        label="Status"
-                        onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+        <Paper 
+            elevation={0} 
+            sx={{
+                height: 'calc(100vh - 200px)',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+                bgcolor: 'background.default',
+                overflow: 'hidden'
+            }}
+        >
+            <Stack spacing={2} sx={{ height: '100%', p: 3 }}>
+                <Typography 
+                    variant="h5" 
+                    sx={{ 
+                        fontWeight: 600,
+                        color: 'text.primary',
+                        pb: 1
+                    }}
+                >
+                    {title}
+                </Typography>
+                
+                {/* Filter Controls */}
+                <Paper 
+                    elevation={0}
+                    sx={{ 
+                        p: 2,
+                        bgcolor: 'background.paper',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider'
+                    }}
+                >
+                    <Stack 
+                        direction="row" 
+                        spacing={2} 
+                        sx={{ 
+                            flexShrink: 0,
+                            alignItems: 'center'
+                        }}
                     >
-                        <MenuItem value="all">All</MenuItem>
-                        {Object.values(TicketStatus).map(status => (
-                            <MenuItem key={status} value={status}>
-                                {status.replace('_', ' ')}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                        <FormControl 
+                            size="small" 
+                            sx={{ 
+                                minWidth: 140,
+                                ...filterControlStyles
+                            }}
+                        >
+                            <InputLabel>Status</InputLabel>
+                            <Select
+                                value={filters.status}
+                                label="Status"
+                                onChange={(e) => setFilters({ ...filters, status: e.target.value as TicketStatus | 'all' })}
+                            >
+                                <MenuItem value="all">All Statuses</MenuItem>
+                                {Object.values(TicketStatus).map(status => (
+                                    <MenuItem key={status} value={status}>
+                                        {status.replace('_', ' ')}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel>Priority</InputLabel>
-                    <Select
-                        value={filters.priority}
-                        label="Priority"
-                        onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-                    >
-                        <MenuItem value="all">All</MenuItem>
-                        {Object.values(TicketPriority).map(priority => (
-                            <MenuItem key={priority} value={priority}>
-                                {priority}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                        <FormControl 
+                            size="small" 
+                            sx={{ 
+                                minWidth: 140,
+                                ...filterControlStyles
+                            }}
+                        >
+                            <InputLabel>Priority</InputLabel>
+                            <Select
+                                value={filters.priority}
+                                label="Priority"
+                                onChange={(e) => setFilters({ ...filters, priority: e.target.value as TicketPriority | 'all' })}
+                            >
+                                <MenuItem value="all">All Priorities</MenuItem>
+                                {Object.values(TicketPriority).map(priority => (
+                                    <MenuItem key={priority} value={priority}>
+                                        {priority}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel>Type</InputLabel>
-                    <Select
-                        value={filters.type}
-                        label="Type"
-                        onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-                    >
-                        <MenuItem value="all">All</MenuItem>
-                        {Object.values(TicketType).map(type => (
-                            <MenuItem key={type} value={type}>
-                                {type.replace('_', ' ')}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                        <FormControl 
+                            size="small" 
+                            sx={{ 
+                                minWidth: 140,
+                                ...filterControlStyles
+                            }}
+                        >
+                            <InputLabel>Type</InputLabel>
+                            <Select
+                                value={filters.type}
+                                label="Type"
+                                onChange={(e) => setFilters({ ...filters, type: e.target.value as TicketType | 'all' })}
+                            >
+                                <MenuItem value="all">All Types</MenuItem>
+                                {Object.values(TicketType).map(type => (
+                                    <MenuItem key={type} value={type}>
+                                        {type.replace('_', ' ')}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
-                <TextField
-                    size="small"
-                    label="Search"
-                    value={filters.search}
-                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                    sx={{ minWidth: 200 }}
-                />
+                        <TextField
+                            size="small"
+                            label="Search tickets"
+                            value={filters.search}
+                            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                            sx={{ 
+                                minWidth: 250,
+                                ml: 'auto',
+                                ...filterControlStyles
+                            }}
+                        />
+                    </Stack>
+                </Paper>
+
+                <TableContainer 
+                    sx={{ 
+                        flexGrow: 1,
+                        bgcolor: 'background.paper',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        overflow: 'auto'
+                    }}
+                >
+                    <Table stickyHeader>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell 
+                                    sx={{ 
+                                        bgcolor: 'background.paper',
+                                        borderBottom: 2,
+                                        borderColor: 'divider',
+                                        py: 2,
+                                        px: 3,
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    Ticket
+                                </TableCell>
+                                <TableCell 
+                                    sx={{ 
+                                        bgcolor: 'background.paper',
+                                        borderBottom: 2,
+                                        borderColor: 'divider',
+                                        py: 2,
+                                        px: 3,
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    Tags
+                                </TableCell>
+                                <TableCell 
+                                    sx={{ 
+                                        bgcolor: 'background.paper',
+                                        borderBottom: 2,
+                                        borderColor: 'divider',
+                                        py: 2,
+                                        px: 3,
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    Status
+                                </TableCell>
+                                <TableCell 
+                                    sx={{ 
+                                        bgcolor: 'background.paper',
+                                        borderBottom: 2,
+                                        borderColor: 'divider',
+                                        py: 2,
+                                        px: 3,
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    Priority
+                                </TableCell>
+                                <TableCell 
+                                    sx={{ 
+                                        bgcolor: 'background.paper',
+                                        borderBottom: 2,
+                                        borderColor: 'divider',
+                                        py: 2,
+                                        px: 3,
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    Type
+                                </TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {filteredTickets.map(ticket => (
+                                <TicketRow 
+                                    key={ticket.id} 
+                                    ticket={ticket}
+                                    onClick={() => ticket.id && onTicketSelect(ticket.id)}
+                                />
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
             </Stack>
-
-            <TableContainer sx={{ flexGrow: 1 }}>
-                <Table stickyHeader>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Ticket</TableCell>
-                            <TableCell sx={{ padding: '16px' }}>Tags</TableCell>
-                            <TableCell sx={{ padding: '16px' }}>Status</TableCell>
-                            <TableCell sx={{ padding: '16px' }}>Priority</TableCell>
-                            <TableCell sx={{ padding: '16px' }}>Type</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {filteredTickets.map(ticket => (
-                            <TicketRow 
-                                key={ticket.id} 
-                                ticket={ticket}
-                                onClick={() => ticket.id && onTicketSelect(ticket.id)}
-                            />
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Stack>
+        </Paper>
     );
 }

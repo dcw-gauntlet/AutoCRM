@@ -1,4 +1,4 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Enums
 export enum TicketPriority {
@@ -74,6 +74,7 @@ export type Ticket = {
     creator: User;
     assignee: User;
     queue: Queue;
+
 };
 
 export interface Queue {
@@ -101,10 +102,12 @@ export interface UserQueue {
 
 export class AutoCRM {
     private client;
+    private userCache: Map<string, User>;
     static readonly DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000000';
 
     constructor(supabaseClient: SupabaseClient) {
         this.client = supabaseClient;
+        this.userCache = new Map();
     }
 
     async getTicketsByAssignee(userId: string): Promise<any[]> {
@@ -178,6 +181,7 @@ export class AutoCRM {
                 status: ticket.status,
                 creator: ticket.creator?.id || AutoCRM.DEFAULT_USER_ID,
                 assignee: ticket.assignee?.id || AutoCRM.DEFAULT_USER_ID,
+                queue_id: ticket.queue?.id
             };
 
             const { data, error } = await this.client
@@ -194,10 +198,16 @@ export class AutoCRM {
             console.error("Error in upsertTicket:", error);
             throw new Error(`Failed to upsert ticket: ${error.message}`);
         }
+
     }
 
-    async getUser(id: string): Promise<User | null> {
+    async getUser(id: string): Promise<User> {
         try {
+            // Check cache first
+            if (this.userCache.has(id)) {
+                return this.userCache.get(id)!;
+            }
+
             const { data, error } = await this.client
                 .from('users')
                 .select('*')
@@ -205,21 +215,22 @@ export class AutoCRM {
                 .single();
 
             if (error) {
-                // If it's a "no rows returned" error, silently return null
+                // If it's a "no rows returned" error, return the default user
                 if (error.code === 'PGRST116') {
-                    return null;
+                    const defaultUser = await this.getUser(AutoCRM.DEFAULT_USER_ID);
+                    this.userCache.set(id, defaultUser);
+                    return defaultUser;
                 }
-                // Only throw for unexpected errors
                 throw new Error(`Failed to get user: ${error.message}`);
             }
 
+            this.userCache.set(id, data);
             return data;
         } catch (error) {
-            // Only rethrow unexpected errors
             if (error instanceof Error && !error.message.includes('Failed to get user')) {
                 throw error;
             }
-            return null;
+            return this.getUser(AutoCRM.DEFAULT_USER_ID);
         }
     }
 
@@ -289,7 +300,7 @@ export class AutoCRM {
             if (!ticketData) {
                 return null; // Ticket not found
             }
-
+            console.log("Here's some data:", ticketData);
             // Fetch Creator
             const creatorId = ticketData.creator === null || ticketData.creator === undefined 
                 ? AutoCRM.DEFAULT_USER_ID 
@@ -327,7 +338,7 @@ export class AutoCRM {
                 tags: tags,
                 creator: creator,
                 assignee: assignee,
-                queue: ticketData.queue as Queue
+                queue: ticketData.queue
             };
 
             return ticket;
@@ -720,32 +731,37 @@ export class AutoCRM {
         }
     }
 
-    async getTicketsByQueue(queueId: number): Promise<any[]> {
-        const { data, error } = await this.client
-            .from('tickets')
-            .select(`
-                *,
-                queue_id,
-                queue:queues!queue_id(*)
-            `)
-            .eq('queue_id', queueId);
+    async getTicketsByQueue(queueId: number): Promise<Ticket[]> {
+        try {
+            const { data, error } = await this.client
+                .from('tickets')
+                .select(`
+                    *,
+                    queue:queues!queue_id(*)
+                `)
+                .eq('queue_id', queueId);
 
-        if (error) throw error;
+            if (error) throw error;
 
-        // Fetch user data for creator and assignee
-        const ticketsWithUsers = await Promise.all((data || []).map(async (ticket) => {
-            const [creator, assignee] = await Promise.all([
-                this.getUser(ticket.creator),
-                this.getUser(ticket.assignee)
-            ]);
-            return {
-                ...ticket,
-                creator,
-                assignee
-            };
-        }));
+            // Fetch user data for creator and assignee
+            const ticketsWithUsers = await Promise.all((data || []).map(async (ticket) => {
+                const [creator, assignee] = await Promise.all([
+                    this.getUser(ticket.creator || AutoCRM.DEFAULT_USER_ID),
+                    this.getUser(ticket.assignee || AutoCRM.DEFAULT_USER_ID)
+                ]);
+                
+                return {
+                    ...ticket,
+                    creator,
+                    assignee
+                };
+            }));
 
-        return ticketsWithUsers;
+            return ticketsWithUsers;
+        } catch (error: any) {
+            console.error("Error in getTicketsByQueue:", error);
+            throw new Error(`Failed to get tickets by queue: ${error.message}`);
+        }
     }
 
     async upsertQueue(queue: Partial<Queue>): Promise<Queue> {
@@ -873,28 +889,27 @@ export class AutoCRM {
     }
 
     async getTickets(): Promise<Ticket[]> {
-        const { data, error } = await this.client
-            .from('tickets')
-            .select(`
-                *,
-                tags:ticket_tags(
-                    id,
-                    tags(
-                        id,
-                        tag
-                    )
-                ),
-                queue:queues(*)
-            `)
-            .order('updated_at', { ascending: false });
+        try {
+            const { data: ticketData, error } = await this.client
+                .from('tickets')
+                .select(`
+                    *,
+                    queue:queues(*),
+                    assignee:users!tickets_assignee_fkey(*)
+                `)
+                .order('updated_at', { ascending: false });
 
-        if (error) throw error;
+            if (error) throw error;
 
-        // Transform the nested tags data structure
-        return (data || []).map(ticket => ({
-            ...ticket,
-            tags: ticket.tags?.map((tt: any) => tt.tags) || []
-        }));
+            return (ticketData || []).map(ticket => ({
+                ...ticket,
+                assignee: ticket.assignee || null,
+                tags: ticket.tags?.map((tt: any) => tt.tags) || []
+            }));
+        } catch (error: any) {
+            console.error("Error in getTickets:", error);
+            throw new Error(`Failed to get tickets: ${error.message}`);
+        }
     }
 
     async getQueue(queueId: number): Promise<Queue> {

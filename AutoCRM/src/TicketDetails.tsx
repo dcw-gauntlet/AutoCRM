@@ -11,7 +11,10 @@ import {
     Box,
     Chip,
     Tabs,
-    Tab
+    Tab,
+    Select,
+    FormControl,
+    InputLabel
 } from '@mui/material';
 import { AutoCRM, Ticket, TicketPriority, TicketStatus, TicketType, User, MessageType, UserRole, Queue } from './AutoCRM';
 import { Messages } from './components/Messages';
@@ -60,7 +63,7 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
         messages: [],
         tags: [],
         assignee: undefined,
-        queue_id: 1  // Just store the ID
+        queue: undefined
     });
     const [queues, setQueues] = useState<Queue[]>([]);
     const [activeTab, setActiveTab] = useState(0);
@@ -73,19 +76,18 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
                 const [user, allQueues, defaultQueue] = await Promise.all([
                     autoCRM.getCurrentUser(),
                     autoCRM.getAllQueues(),
-                    autoCRM.getQueue(1)  // Get default queue
+                    autoCRM.getQueue(1)
                 ]);
                 setCurrentUser(user);
                 setQueues(allQueues);
 
-                // Load ticket if editing, otherwise set default queue
                 if (!isNewTicket && id) {
                     const ticketData = await autoCRM.getTicketDetails(parseInt(id));
                     if (ticketData) {
                         setTicket(ticketData);
                     }
                 } else {
-                    setTicket(prev => ({ ...prev, queue_id: defaultQueue.id }));
+                    setTicket(prev => ({ ...prev, queue: defaultQueue }));
                 }
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -229,6 +231,23 @@ export function TicketDetails({ autoCRM }: TicketDetailsProps) {
                                     <MenuItem key={priority} value={priority}>{priority}</MenuItem>
                                 ))}
                             </TextField>
+                            <FormControl fullWidth sx={{ flex: 1 }}>
+                                <InputLabel>Queue</InputLabel>
+                                <Select
+                                    value={ticket.queue?.id || ''}
+                                    label="Queue"
+                                    onChange={(e) => {
+                                        const selectedQueue = queues.find(q => q.id === e.target.value);
+                                        setTicket(prev => ({ ...prev, queue: selectedQueue }));
+                                    }}
+                                >
+                                    {queues.map((queue) => (
+                                        <MenuItem key={queue.id} value={queue.id}>
+                                            {queue.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                             <TextField
                                 select
                                 label="Status"

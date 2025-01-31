@@ -5,7 +5,6 @@ import {
     ListItemIcon, 
     ListItemText, 
     IconButton, 
-    Paper,
     Button,
     Stack,
     Typography

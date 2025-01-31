@@ -30,19 +30,25 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
     const cellStyles = {
         whiteSpace: 'normal',
         overflow: 'hidden',
-        padding: '8px 16px',
-        height: '72px',
-        bgcolor: '#f5f5f5'  // Light gray background for all cells
+        padding: '12px 16px',
+        height: '80px',
+        borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+        '&:first-of-type': {
+            paddingLeft: '24px',
+        },
+        '&:last-child': {
+            paddingRight: '24px',
+        }
     };
 
     const chipBaseStyles = {
         width: '100%',
-        height: '28px',  // Slightly taller
-        borderRadius: '4px',
+        height: '32px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
         '& .MuiChip-label': {
-            fontSize: '0.875rem',  // Bigger text
-            fontWeight: 600,       // Bolder text
-            px: 1,
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            px: 2,
             width: '100%',
             textAlign: 'center'
         }
@@ -51,24 +57,24 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'open': return { 
-                bgcolor: '#ff4444',
-                color: '#fff'
+                bgcolor: 'error.main',
+                color: 'error.contrastText'
             };
             case 'in_progress': return { 
-                bgcolor: '#00C851',
-                color: '#fff'
+                bgcolor: 'success.main',
+                color: 'success.contrastText'
             };
             case 'on_hold': return { 
-                bgcolor: '#ffbb33',
-                color: '#000'
+                bgcolor: 'warning.main',
+                color: 'warning.contrastText'
             };
             case 'closed': return { 
-                bgcolor: '#2196f3',
-                color: '#fff'
+                bgcolor: 'info.main',
+                color: 'info.contrastText'
             };
             default: return { 
-                bgcolor: '#e0e0e0',
-                color: '#000'
+                bgcolor: 'grey.200',
+                color: 'text.primary'
             };
         }
     };
@@ -76,24 +82,24 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
     const getPriorityColor = (priority: string) => {
         switch (priority) {
             case 'urgent': return { 
-                bgcolor: '#ff4444',
-                color: '#fff'
+                bgcolor: 'error.main',
+                color: 'error.contrastText'
             };
             case 'high': return { 
-                bgcolor: '#ffbb33',
-                color: '#000'
+                bgcolor: 'warning.main',
+                color: 'warning.contrastText'
             };
             case 'medium': return { 
-                bgcolor: '#00C851',
-                color: '#fff'
+                bgcolor: 'success.main',
+                color: 'success.contrastText'
             };
             case 'low': return { 
-                bgcolor: '#e0e0e0',
-                color: '#000'
+                bgcolor: 'grey.200',
+                color: 'text.primary'
             };
             default: return { 
-                bgcolor: '#e0e0e0',
-                color: '#000'
+                bgcolor: 'grey.200',
+                color: 'text.primary'
             };
         }
     };
@@ -101,24 +107,24 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
     const getTypeColor = (type: string) => {
         switch (type) {
             case 'bug': return { 
-                bgcolor: '#ff4444',
-                color: '#fff'
+                bgcolor: 'error.light',
+                color: 'error.contrastText'
             };
             case 'feature': return { 
-                bgcolor: '#ff80ab',
-                color: '#000'
+                bgcolor: 'secondary.light',
+                color: 'secondary.contrastText'
             };
             case 'support': return { 
-                bgcolor: '#ffbb33',
-                color: '#000'
+                bgcolor: 'warning.light',
+                color: 'warning.contrastText'
             };
             case 'inquiry': return { 
-                bgcolor: '#2196f3',
-                color: '#fff'
+                bgcolor: 'info.light',
+                color: 'info.contrastText'
             };
             default: return { 
-                bgcolor: '#e0e0e0',
-                color: '#000'
+                bgcolor: 'grey.200',
+                color: 'text.primary'
             };
         }
     };
@@ -129,18 +135,21 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
             onClick={onClick}
             sx={{ 
                 cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                bgcolor: 'background.paper',
                 '&:hover': {
-                    bgcolor: '#eeeeee !important'  // Slightly darker on hover
+                    bgcolor: 'action.hover',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.08)'
                 }
             }}
         >
             <TableCell sx={cellStyles}>
-                <Stack spacing={0.5}>
+                <Stack spacing={1}>
                     <Typography 
-                        variant="body1" 
+                        variant="subtitle1" 
                         sx={{ 
-                            fontWeight: 500,
-                            color: '#000'  // Darker text
+                            fontWeight: 600,
+                            color: 'text.primary'
                         }}
                     >
                         {ticket.title}
@@ -148,7 +157,7 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
                     <Typography 
                         variant="body2" 
                         sx={{
-                            color: '#424242',  // Darker secondary text
+                            color: 'text.secondary',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             display: '-webkit-box',
@@ -162,7 +171,7 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
             </TableCell>
 
             <TableCell sx={cellStyles}>
-                <Stack spacing={0.5}>
+                <Stack spacing={0.75} sx={{ minHeight: 32, justifyContent: 'center' }}>
                     {tags.map((tag) => (
                         <Chip
                             key={tag.id}
@@ -170,18 +179,19 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
                             size="small"
                             sx={{
                                 ...chipBaseStyles,
-                                bgcolor: 'rgba(0, 0, 0, 0.08)',
-                                color: '#000'
+                                bgcolor: 'background.default',
+                                color: 'text.primary',
+                                borderRadius: '16px',
                             }}
                         />
                     ))}
                     {tags.length === 0 && (
                         <Typography 
                             variant="body2" 
-                            color="text.secondary" 
                             sx={{ 
                                 fontStyle: 'italic',
-                                color: '#616161'
+                                color: 'text.secondary',
+                                lineHeight: '32px'
                             }}
                         >
                             No tags
@@ -196,7 +206,8 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
                     size="small"
                     sx={{
                         ...chipBaseStyles,
-                        ...getStatusColor(ticket.status)
+                        ...getStatusColor(ticket.status),
+                        textTransform: 'capitalize'
                     }}
                 />
             </TableCell>
@@ -207,7 +218,8 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
                     size="small"
                     sx={{
                         ...chipBaseStyles,
-                        ...getPriorityColor(ticket.priority)
+                        ...getPriorityColor(ticket.priority),
+                        textTransform: 'capitalize'
                     }}
                 />
             </TableCell>
@@ -218,7 +230,22 @@ export function TicketRow({ ticket, onClick }: TicketRowProps) {
                     size="small"
                     sx={{
                         ...chipBaseStyles,
-                        ...getTypeColor(ticket.type)
+                        ...getTypeColor(ticket.type),
+                        textTransform: 'capitalize'
+                    }}
+                />
+            </TableCell>
+
+            <TableCell sx={cellStyles}>
+                <Chip
+                    label={ticket.assignee ? 
+                        `${ticket.assignee.first_name} ${ticket.assignee.last_name}` : 
+                        'Unassigned'}
+                    size="small"
+                    sx={{
+                        ...chipBaseStyles,
+                        bgcolor: 'background.default',
+                        color: 'text.primary',
                     }}
                 />
             </TableCell>

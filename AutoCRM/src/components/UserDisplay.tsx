@@ -9,7 +9,8 @@ import {
 import { User, UserRole } from '../AutoCRM';
 
 // Helper functions moved to separate utility file
-export const getInitials = (firstName: string, lastName: string) => {
+export const getInitials = (firstName?: string, lastName?: string) => {
+    if (!firstName || !lastName) return '?';
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 };
 
@@ -25,25 +26,38 @@ export const getRoleColor = (role: UserRole) => {
 };
 
 interface UserDisplayProps {
-    user: User;
+    user: User | null | undefined;
     size?: 'small' | 'medium' | 'large' | 'xlarge';
     showTooltip?: boolean;
 }
 
-export function UserDisplay({ user, size = 'medium', showTooltip = true }: UserDisplayProps) {
-    const avatarSizes = {
-        small: 32,
-        medium: 48,
-        large: 64,
-        xlarge: 96
-    };
+const avatarSizes = {
+    small: 32,
+    medium: 48,
+    large: 64,
+    xlarge: 96
+};
 
-    const fontSizes = {
-        small: '0.875rem',
-        medium: '1rem',
-        large: '1.25rem',
-        xlarge: '1.5rem'
-    };
+const fontSizes = {
+    small: '0.875rem',
+    medium: '1rem',
+    large: '1.25rem',
+    xlarge: '1.5rem'
+};
+
+export function UserDisplay({ user, size = 'medium', showTooltip = true }: UserDisplayProps) {
+    if (!user) {
+        return (
+            <Stack direction="row" spacing={1} alignItems="center">
+                <Avatar sx={{ width: avatarSizes[size], height: avatarSizes[size] }}>
+                    ?
+                </Avatar>
+                <Typography sx={{ fontSize: fontSizes[size] }}>
+                    Unassigned
+                </Typography>
+            </Stack>
+        );
+    }
 
     const displayName = user.friendly_name || `${user.first_name} ${user.last_name}`;
     const tooltipName = user.friendly_name ? `${user.first_name} ${user.last_name}` : undefined;
@@ -66,8 +80,6 @@ export function UserDisplay({ user, size = 'medium', showTooltip = true }: UserD
             {getInitials(user.first_name, user.last_name)}
         </Avatar>
     );
-
-    console.log('UserDisplay - profile picture URL:', user.profile_picture_url);
 
     return (
         <Stack direction="row" spacing={1} alignItems="center">

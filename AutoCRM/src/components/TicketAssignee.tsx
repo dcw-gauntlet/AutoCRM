@@ -98,11 +98,14 @@ export function TicketAssignee({ ticketId, autoCRM, currentAssignee, onAssigneeU
                 options={users}
                 loading={loading}
                 getOptionLabel={(user) => `${user.first_name} ${user.last_name}`}
-                renderOption={(props, user) => (
-                    <li {...props}>
-                        <UserDisplay user={user} />
-                    </li>
-                )}
+                renderOption={(props, user) => {
+                    const { key, ...otherProps } = props;
+                    return (
+                        <li key={key} {...otherProps}>
+                            <UserDisplay user={user} />
+                        </li>
+                    );
+                }}
                 renderInput={(params) => (
                     <TextField
                         {...params}
